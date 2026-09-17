@@ -1,7 +1,7 @@
 "use client";
 
 import { useFormState, useFormStatus } from "react-dom";
-import { loginAction } from "@/app/login/actions";
+import { loginAction, type LoginState } from "@/app/login/actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -16,7 +16,7 @@ function SubmitButton() {
 }
 
 export function LoginForm() {
-  const [state, formAction] = useFormState(loginAction, { error: null });
+  const [state, formAction] = useFormState<LoginState, FormData>(loginAction, { error: null });
 
   return (
     <form action={formAction} className="space-y-4">

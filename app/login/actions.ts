@@ -3,7 +3,14 @@
 import { redirect } from "next/navigation";
 import { signIn } from "@/services/auth.service";
 
-export async function loginAction(_prevState: { error: string | null }, formData: FormData) {
+export interface LoginState {
+  error: string | null;
+}
+
+export async function loginAction(
+  _prevState: LoginState,
+  formData: FormData
+): Promise<LoginState> {
   const email = String(formData.get("email") ?? "");
   const password = String(formData.get("password") ?? "");
 

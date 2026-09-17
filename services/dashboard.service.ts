@@ -31,7 +31,7 @@ function startOfMonthISO(date = new Date()) {
  * retornam 0 e serão conectados quando essas migrações existirem.
  */
 export async function getDashboardSummary(): Promise<DashboardSummary> {
-  const supabase = createClient();
+  const supabase = await createClient();
   const todayStart = startOfDayISO();
 
   const [
@@ -66,7 +66,7 @@ export async function getDashboardSummary(): Promise<DashboardSummary> {
     .gte("starts_at", todayStart);
 
   const clientsAttendedToday = new Set(
-    (distinctClientsToday.data ?? []).map((row) => row.client_id)
+    (distinctClientsToday.data ?? []).map((row: { client_id: string }) => row.client_id)
   ).size;
 
   const upcomingAppointments: UpcomingAppointment[] = (upcoming ?? []).map((row: any) => ({

@@ -7,19 +7,19 @@ export interface AuthResult {
 
 /** Autentica com e-mail/senha. Usado pela Server Action da tela de login. */
 export async function signIn(email: string, password: string): Promise<AuthResult> {
-  const supabase = createClient();
+  const supabase = await createClient();
   const { error } = await supabase.auth.signInWithPassword({ email, password });
   return { error: error?.message ?? null };
 }
 
 export async function signOut(): Promise<void> {
-  const supabase = createClient();
+  const supabase = await createClient();
   await supabase.auth.signOut();
 }
 
 /** Retorna o perfil (public.users) do usuário logado, ou null se não autenticado. */
 export async function getCurrentUserProfile(): Promise<UserRow | null> {
-  const supabase = createClient();
+  const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
