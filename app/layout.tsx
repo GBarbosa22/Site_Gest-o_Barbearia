@@ -20,6 +20,12 @@ export const viewport: Viewport = {
   themeColor: "#0a0a0b",
   width: "device-width",
   initialScale: 1,
+  // viewport-fit=cover permite usar env(safe-area-inset-*) para respeitar o
+  // notch/home indicator do iPhone quando o app roda instalado (PWA/standalone).
+  viewportFit: "cover",
+  // Evita zoom acidental ao focar inputs no Safari iOS, mantendo os campos acessíveis.
+  maximumScale: 1,
+  userScalable: false,
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

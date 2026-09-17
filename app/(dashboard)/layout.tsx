@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { Sidebar } from "@/components/layout/sidebar";
 import { Header } from "@/components/layout/header";
+import { MobileNav } from "@/components/layout/mobile-nav";
 import { getCurrentUserProfile } from "@/services/auth.service";
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -15,8 +16,9 @@ export default async function DashboardLayout({ children }: { children: React.Re
       <Sidebar role={user.role} />
       <div className="flex flex-1 flex-col">
         <Header user={user} />
-        <main className="flex-1 overflow-y-auto p-4 md:p-8">{children}</main>
+        <main className="flex-1 overflow-y-auto p-4 pb-24 md:p-8 md:pb-8">{children}</main>
       </div>
+      <MobileNav role={user.role} />
     </div>
   );
 }

@@ -3,36 +3,9 @@
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import {
-  LayoutDashboard,
-  Calendar,
-  Users,
-  Scissors,
-  Package,
-  Wallet,
-  BarChart3,
-  ShieldCheck,
-} from "lucide-react";
 import { cn } from "@/lib/utils";
+import { NAV_ITEMS } from "@/lib/nav-items";
 import type { UserRole } from "@/types/database.types";
-
-interface NavItem {
-  href: string;
-  label: string;
-  icon: React.ComponentType<{ className?: string }>;
-  adminOnly?: boolean;
-}
-
-const NAV_ITEMS: NavItem[] = [
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/agenda", label: "Agenda", icon: Calendar },
-  { href: "/clientes", label: "Clientes", icon: Users },
-  { href: "/servicos", label: "Serviços", icon: Scissors, adminOnly: true },
-  { href: "/estoque", label: "Estoque", icon: Package, adminOnly: true },
-  { href: "/financeiro", label: "Financeiro", icon: Wallet, adminOnly: true },
-  { href: "/relatorios", label: "Relatórios", icon: BarChart3, adminOnly: true },
-  { href: "/auditoria", label: "Auditoria", icon: ShieldCheck, adminOnly: true },
-];
 
 export function Sidebar({ role }: { role: UserRole }) {
   const pathname = usePathname();
