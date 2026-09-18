@@ -1,12 +1,21 @@
 "use client";
 
 import { useFormState } from "react-dom";
+import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { SubmitButton } from "@/components/forms/submit-button";
-import type { BarberRow, ClientRow } from "@/types/database.types";
+import { cn } from "@/lib/utils";
+import type { BarberRow, ClientRow, PaymentMethod } from "@/types/database.types";
 import type { SubscriptionFormState } from "@/app/(dashboard)/planos/actions";
+
+const PAYMENT_OPTIONS: { value: PaymentMethod; label: string }[] = [
+  { value: "debito", label: "Débito" },
+  { value: "credito", label: "Crédito" },
+  { value: "pix", label: "PIX" },
+  { value: "dinheiro", label: "Dinheiro" },
+];
 
 interface SubscriptionFormProps {
   action: (state: SubscriptionFormState, formData: FormData) => Promise<SubscriptionFormState>;
@@ -19,6 +28,7 @@ export function SubscriptionForm({ action, clients, barbers, defaultClientId }: 
   const [state, formAction] = useFormState<SubscriptionFormState, FormData>(action, {
     error: null,
   });
+  const [method, setMethod] = useState<PaymentMethod>("debito");
 
   return (
     <form action={formAction} className="space-y-5">
@@ -54,6 +64,30 @@ export function SubscriptionForm({ action, clients, barbers, defaultClientId }: 
         <p className="text-xs text-muted-foreground">
           4 cortes, 1 por semana. Sempre editável na venda.
         </p>
+      </div>
+
+      <div className="space-y-2">
+        <Label>Pagamento</Label>
+        <div className="grid grid-cols-4 gap-2">
+          {PAYMENT_OPTIONS.map((option) => (
+            <label
+              key={option.value}
+              className={cn(
+                "flex cursor-pointer items-center justify-center rounded-md border border-input px-2 py-2.5 text-sm font-medium transition-colors has-[:checked]:border-gold has-[:checked]:bg-gold/10 has-[:checked]:text-gold"
+              )}
+            >
+              <input
+                type="radio"
+                name="payment_method"
+                value={option.value}
+                checked={method === option.value}
+                onChange={() => setMethod(option.value)}
+                className="sr-only"
+              />
+              {option.label}
+            </label>
+          ))}
+        </div>
       </div>
 
       {state?.error ? (

@@ -14,9 +14,10 @@ export async function createSubscriptionAction(
   formData: FormData
 ): Promise<SubscriptionFormState> {
   const parsed = subscriptionSchema.safeParse({
-    client_id: formData.get("client_id"),
-    barber_id: formData.get("barber_id"),
+    client_id: formData.get("client_id") ?? "",
+    barber_id: formData.get("barber_id") ?? "",
     price: formData.get("price"),
+    payment_method: formData.get("payment_method") ?? "",
   });
 
   if (!parsed.success) {
@@ -27,6 +28,7 @@ export async function createSubscriptionAction(
     clientId: parsed.data.client_id,
     barberId: parsed.data.barber_id || null,
     price: parsed.data.price,
+    paymentMethod: parsed.data.payment_method,
   });
   if (error) return { error };
 

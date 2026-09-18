@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUserProfile } from "@/services/auth.service";
+import { recordAutoCashEntry } from "@/services/cash-register.service";
 import type { PaymentMethod, PaymentRow } from "@/types/database.types";
 
 export interface PaymentInput {
@@ -19,18 +20,32 @@ export async function createPayment(
   const supabase = await createClient();
   const user = await getCurrentUserProfile();
 
-  const { error } = await supabase.from("payments").insert({
-    appointment_id: appointmentId,
-    amount: input.amount,
-    discount: input.discount,
-    method: input.method,
-    paid: input.method !== null,
-    due_date: input.method === null ? input.dueDate || null : null,
-    notes: input.notes || null,
-    created_by: user?.id ?? null,
-  });
+  const { data, error } = await supabase
+    .from("payments")
+    .insert({
+      appointment_id: appointmentId,
+      amount: input.amount,
+      discount: input.discount,
+      method: input.method,
+      paid: input.method !== null,
+      due_date: input.method === null ? input.dueDate || null : null,
+      notes: input.notes || null,
+      created_by: user?.id ?? null,
+    })
+    .select("id")
+    .single();
 
-  return { error: error?.message ?? null };
+  if (error) return { error: error.message };
+
+  if (input.method === "dinheiro") {
+    await recordAutoCashEntry({
+      category: "corte",
+      amount: input.amount - input.discount,
+      paymentId: data.id,
+    });
+  }
+
+  return { error: null };
 }
 
 export async function getPaymentByAppointment(appointmentId: string): Promise<PaymentRow | null> {
@@ -69,11 +84,24 @@ export async function markPaymentPaid(
   method: PaymentMethod
 ): Promise<{ error: string | null }> {
   const supabase = await createClient();
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from("payments")
     .update({ method, paid: true, due_date: null })
-    .eq("appointment_id", appointmentId);
-  return { error: error?.message ?? null };
+    .eq("appointment_id", appointmentId)
+    .select("id, amount, discount")
+    .single();
+
+  if (error) return { error: error.message };
+
+  if (method === "dinheiro") {
+    await recordAutoCashEntry({
+      category: "corte",
+      amount: Number(data.amount) - Number(data.discount),
+      paymentId: data.id,
+    });
+  }
+
+  return { error: null };
 }
 
 export async function getRevenueBetween(startISO: string, endISO: string): Promise<number> {

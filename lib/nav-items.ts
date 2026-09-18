@@ -6,6 +6,7 @@ import {
   Ticket,
   Package,
   Wallet,
+  Banknote,
   BarChart3,
   ShieldCheck,
   UserCog,
@@ -28,6 +29,7 @@ export const NAV_ITEMS: NavItem[] = [
   { href: "/planos", label: "Planos", icon: Ticket },
   { href: "/barbeiros", label: "Barbeiros", icon: UserCog, adminOnly: true },
   { href: "/servicos", label: "Serviços", icon: Scissors, adminOnly: true },
+  { href: "/caixa", label: "Caixa", icon: Banknote, adminOnly: true },
   {
     href: "/estoque",
     label: "Estoque",

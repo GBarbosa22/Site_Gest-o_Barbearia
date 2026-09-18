@@ -1,7 +1,8 @@
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUserProfile } from "@/services/auth.service";
+import { recordAutoCashEntry } from "@/services/cash-register.service";
 import { computeSubscriptionState, type SubscriptionState } from "@/lib/subscription-logic";
-import type { SubscriptionRow } from "@/types/database.types";
+import type { PaymentMethod, SubscriptionRow } from "@/types/database.types";
 
 export interface SubscriptionWithState extends SubscriptionRow {
   client_name: string;
@@ -96,19 +97,31 @@ export async function createSubscription(input: {
   clientId: string;
   barberId?: string | null;
   price: number;
+  paymentMethod: PaymentMethod;
 }): Promise<{ error: string | null }> {
   const supabase = await createClient();
   const user = await getCurrentUserProfile();
 
-  const { error } = await supabase.from("subscriptions").insert({
-    client_id: input.clientId,
-    barber_id: input.barberId || null,
-    price: input.price,
-    total_credits: 4,
-    created_by: user?.id ?? null,
-  });
+  const { data, error } = await supabase
+    .from("subscriptions")
+    .insert({
+      client_id: input.clientId,
+      barber_id: input.barberId || null,
+      price: input.price,
+      total_credits: 4,
+      payment_method: input.paymentMethod,
+      created_by: user?.id ?? null,
+    })
+    .select("id")
+    .single();
 
-  return { error: error?.message ?? null };
+  if (error) return { error: error.message };
+
+  if (input.paymentMethod === "dinheiro") {
+    await recordAutoCashEntry({ category: "plano", amount: input.price, subscriptionId: data.id });
+  }
+
+  return { error: null };
 }
 
 export async function cancelSubscription(id: string): Promise<{ error: string | null }> {

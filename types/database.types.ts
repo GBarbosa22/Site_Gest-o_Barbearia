@@ -16,6 +16,16 @@ export type AppointmentStatus =
   | "no_show";
 export type PaymentMethod = "pix" | "dinheiro" | "credito" | "debito";
 export type SubscriptionStatus = "active" | "completed" | "expired" | "cancelled";
+export type CashRegisterStatus = "open" | "closed";
+export type CashMovementType = "entrada" | "saida";
+export type CashMovementCategory =
+  | "corte"
+  | "plano"
+  | "despesa"
+  | "compra"
+  | "sangria"
+  | "ajuste"
+  | "outro";
 
 export type UserRow = {
   id: string;
@@ -97,6 +107,7 @@ export type SubscriptionRow = {
   total_credits: number;
   purchased_at: string;
   status: SubscriptionStatus;
+  payment_method: PaymentMethod | null;
   created_by: string | null;
   created_at: string;
   updated_at: string;
@@ -109,6 +120,35 @@ export type SubscriptionUseRow = {
   appointment_id: string | null;
   used_at: string;
   created_by: string | null;
+};
+
+export type CashRegisterRow = {
+  id: string;
+  opened_at: string;
+  opened_by: string | null;
+  opening_balance: number;
+  status: CashRegisterStatus;
+  closed_at: string | null;
+  closed_by: string | null;
+  expected_balance: number | null;
+  informed_balance: number | null;
+  difference: number | null;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type CashMovementRow = {
+  id: string;
+  cash_register_id: string;
+  type: CashMovementType;
+  category: CashMovementCategory;
+  amount: number;
+  description: string | null;
+  payment_id: string | null;
+  subscription_id: string | null;
+  created_by: string | null;
+  created_at: string;
 };
 
 type UserInsert = {
@@ -178,6 +218,7 @@ type SubscriptionInsert = {
   total_credits?: number;
   purchased_at?: string;
   status?: SubscriptionStatus;
+  payment_method?: PaymentMethod | null;
   created_by?: string | null;
 };
 
@@ -187,6 +228,32 @@ type SubscriptionUseInsert = {
   week_number: number;
   appointment_id?: string | null;
   used_at?: string;
+  created_by?: string | null;
+};
+
+type CashRegisterInsert = {
+  id?: string;
+  opened_at?: string;
+  opened_by?: string | null;
+  opening_balance?: number;
+  status?: CashRegisterStatus;
+  closed_at?: string | null;
+  closed_by?: string | null;
+  expected_balance?: number | null;
+  informed_balance?: number | null;
+  difference?: number | null;
+  notes?: string | null;
+};
+
+type CashMovementInsert = {
+  id?: string;
+  cash_register_id: string;
+  type: CashMovementType;
+  category: CashMovementCategory;
+  amount: number;
+  description?: string | null;
+  payment_id?: string | null;
+  subscription_id?: string | null;
   created_by?: string | null;
 };
 
@@ -241,8 +308,25 @@ export type Database = {
         Update: Partial<SubscriptionUseInsert>;
         Relationships: [];
       };
+      cash_registers: {
+        Row: CashRegisterRow;
+        Insert: CashRegisterInsert;
+        Update: Partial<CashRegisterInsert>;
+        Relationships: [];
+      };
+      cash_movements: {
+        Row: CashMovementRow;
+        Insert: CashMovementInsert;
+        Update: Partial<CashMovementInsert>;
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
-    Functions: Record<string, never>;
+    Functions: {
+      get_open_cash_register_id: {
+        Args: Record<PropertyKey, never>;
+        Returns: string;
+      };
+    };
   };
 };

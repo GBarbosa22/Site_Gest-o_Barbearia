@@ -10,9 +10,27 @@ Hospedagem gratuita: Vercel (front-end) + Supabase (backend/banco), sem servidor
   `services`, `appointments`, com RLS e policies por role (admin/barbeiro).
 - Autenticação com Supabase Auth (login por e-mail/senha, sessão via cookies, middleware de
   proteção de rotas).
-- Layout principal (sidebar + header, tema claro/escuro, paleta preto/grafite/dourado).
-- Dashboard com indicadores de hoje/semana/mês e próximos agendamentos (faturamento e estoque
-  serão conectados nas Fases 3 e 4, quando as tabelas de pagamentos/produtos existirem).
+- Layout principal (sidebar + header, tema claro/escuro, paleta preto/grafite/dourado) e navegação
+  mobile-first (bottom tab bar) pensada para uso real em iPhone.
+- Dashboard com indicadores de hoje/semana/mês.
+
+## Fase 2 (entregue)
+
+- CRUD de barbeiros e catálogo de serviços (admin), CRUD de clientes com busca instantânea e
+  histórico completo.
+
+## Fase 3 (entregue)
+
+- **Atendimentos** (`supabase/migrations/0002_payments.sql`): registro rápido do que aconteceu
+  (cliente, serviço, forma de pagamento ou "vai pagar depois" com data prevista) — substitui a
+  agenda de marcação futura, já que a barbearia usa outro app pra isso.
+- **Planos de 4 cortes** (`supabase/migrations/0003_subscriptions.sql`): 1 crédito por semana de
+  calendário (segunda a domingo) a partir da compra; crédito não usado até domingo é perdido. Tudo
+  calculado em tempo real (`lib/subscription-logic.ts`), sem cron job.
+- **Caixa** (`supabase/migrations/0004_cash_register.sql`): abertura com saldo inicial, entradas
+  automáticas de pagamentos em dinheiro (corte/plano), saídas manuais (despesa/compra/sangria),
+  fechamento com saldo esperado vs. informado. Exclusivo do admin; nunca apaga fechamentos.
+- Dashboard com faturamento real (hoje/semana/mês) a partir dos pagamentos.
 
 ## Pré-requisitos
 
@@ -33,8 +51,9 @@ Copie `.env.local.example` para `.env.local` e preencha com as chaves do seu pro
 cp .env.local.example .env.local
 ```
 
-Rode a migração no seu projeto Supabase (SQL Editor > cole o conteúdo de
-`supabase/migrations/0001_init.sql` > Run), ou via CLI:
+Rode as migrações no seu projeto Supabase, na ordem, colando cada arquivo no SQL Editor e
+clicando Run: `0001_init.sql`, `0002_payments.sql`, `0003_subscriptions.sql`,
+`0004_cash_register.sql`. Ou via CLI:
 
 ```bash
 npx supabase link --project-ref SEU_PROJECT_REF
@@ -73,7 +92,5 @@ as variáveis de ambiente do `.env.local` no painel do projeto na Vercel.
 
 ## Próximas fases
 
-- **Fase 2:** CRUD de barbeiros, clientes, serviços e agenda completa.
-- **Fase 3:** Fluxo de atendimento, pagamentos, planos de 4 cortes, caixa.
-- **Fase 4:** Estoque, consumo interno, vendas, financeiro.
+- **Fase 4:** Estoque, consumo interno, vendas de produtos, financeiro completo.
 - **Fase 5:** Auditoria, relatórios, PWA completo (service worker), refinamento visual.
