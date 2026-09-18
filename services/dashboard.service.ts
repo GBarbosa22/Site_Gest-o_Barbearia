@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
-import type { DashboardSummary, UpcomingAppointment } from "@/types";
+import { getRevenueBetween } from "@/services/payments.service";
+import type { DashboardSummary, RecentAttendance } from "@/types";
 
 function startOfDayISO(date = new Date()) {
   const d = new Date(date);
@@ -23,21 +24,19 @@ function startOfMonthISO(date = new Date()) {
   return d.toISOString();
 }
 
-/**
- * Agrega os indicadores do dashboard principal.
- *
- * Faturamento (dia/semana/mês) e alertas de estoque baixo dependem das
- * tabelas `payments` e `products`, criadas nas Fases 3 e 4 — por ora
- * retornam 0 e serão conectados quando essas migrações existirem.
- */
+/** Agrega os indicadores do dashboard principal. */
 export async function getDashboardSummary(): Promise<DashboardSummary> {
   const supabase = await createClient();
   const todayStart = startOfDayISO();
+  const now = new Date().toISOString();
 
   const [
     { count: cutsToday },
     { count: newClientsToday },
-    { data: upcoming },
+    { data: recent },
+    revenueToday,
+    revenueWeek,
+    revenueMonth,
   ] = await Promise.all([
     supabase
       .from("appointments")
@@ -51,12 +50,15 @@ export async function getDashboardSummary(): Promise<DashboardSummary> {
     supabase
       .from("appointments")
       .select(
-        "id, starts_at, clients(full_name), barbers(full_name), services(name)"
+        "id, starts_at, clients(full_name), barbers(full_name), services(name), payments(amount, discount, paid)"
       )
-      .in("status", ["scheduled", "in_progress"])
-      .gte("starts_at", new Date().toISOString())
-      .order("starts_at", { ascending: true })
+      .eq("status", "completed")
+      .gte("starts_at", todayStart)
+      .order("starts_at", { ascending: false })
       .limit(6),
+    getRevenueBetween(todayStart, now),
+    getRevenueBetween(startOfWeekISO(), now),
+    getRevenueBetween(startOfMonthISO(), now),
   ]);
 
   const distinctClientsToday = await supabase
@@ -69,25 +71,28 @@ export async function getDashboardSummary(): Promise<DashboardSummary> {
     (distinctClientsToday.data ?? []).map((row: { client_id: string }) => row.client_id)
   ).size;
 
-  const upcomingAppointments: UpcomingAppointment[] = (upcoming ?? []).map((row: any) => ({
-    id: row.id,
-    clientName: row.clients?.full_name ?? "Cliente",
-    barberName: row.barbers?.full_name ?? "Barbeiro",
-    serviceName: row.services?.name ?? "Serviço",
-    startsAt: row.starts_at,
-  }));
+  const recentAttendances: RecentAttendance[] = (recent ?? []).map((row: any) => {
+    const payment = Array.isArray(row.payments) ? row.payments[0] : row.payments;
+    return {
+      id: row.id,
+      clientName: row.clients?.full_name ?? "Cliente",
+      barberName: row.barbers?.full_name ?? "Barbeiro",
+      serviceName: row.services?.name ?? "Serviço",
+      startsAt: row.starts_at,
+      amount: payment ? Number(payment.amount) - Number(payment.discount) : null,
+      paid: payment ? payment.paid : null,
+    };
+  });
 
   return {
-    revenueToday: 0,
-    revenueWeek: 0,
-    revenueMonth: 0,
+    revenueToday,
+    revenueWeek,
+    revenueMonth,
     cutsToday: cutsToday ?? 0,
     clientsAttendedToday,
     newClientsToday: newClientsToday ?? 0,
     activeSubscriptions: 0,
     lowStockCount: 0,
-    upcomingAppointments,
+    recentAttendances,
   };
 }
-
-export { startOfWeekISO, startOfMonthISO };

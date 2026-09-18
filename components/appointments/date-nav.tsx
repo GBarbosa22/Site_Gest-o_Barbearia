@@ -11,7 +11,7 @@ function addDays(dateISO: string, days: number) {
 function buildHref(date: string, barberId?: string) {
   const params = new URLSearchParams({ date });
   if (barberId) params.set("barber", barberId);
-  return `/agenda?${params.toString()}`;
+  return `/atendimentos?${params.toString()}`;
 }
 
 export function DateNav({ date, barberId }: { date: string; barberId?: string }) {

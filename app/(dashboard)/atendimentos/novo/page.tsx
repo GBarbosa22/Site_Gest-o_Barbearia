@@ -3,14 +3,9 @@ import { listBarbers, getBarberByUserId } from "@/services/barbers.service";
 import { listClients } from "@/services/clients.service";
 import { listServices } from "@/services/catalog.service";
 import { AppointmentForm } from "@/components/appointments/appointment-form";
-import { createAppointmentAction } from "@/app/(dashboard)/agenda/actions";
+import { createAttendanceAction } from "@/app/(dashboard)/atendimentos/actions";
 
-export default async function NovoAgendamentoPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ date?: string }>;
-}) {
-  const { date } = await searchParams;
+export default async function NovoAtendimentoPage() {
   const user = await getCurrentUserProfile();
   const isAdmin = user?.role === "admin";
 
@@ -24,16 +19,15 @@ export default async function NovoAgendamentoPage({
   return (
     <div className="mx-auto max-w-md space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Novo agendamento</h1>
-        <p className="text-sm text-muted-foreground">Preencha os dados do atendimento.</p>
+        <h1 className="text-2xl font-semibold tracking-tight">Novo atendimento</h1>
+        <p className="text-sm text-muted-foreground">Registre o que acabou de acontecer.</p>
       </div>
       <AppointmentForm
-        action={createAppointmentAction}
+        action={createAttendanceAction}
         clients={clients}
         services={services}
         barbers={barbers}
         lockedBarber={lockedBarber}
-        defaultDate={date}
       />
     </div>
   );

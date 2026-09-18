@@ -14,6 +14,7 @@ export type AppointmentStatus =
   | "completed"
   | "cancelled"
   | "no_show";
+export type PaymentMethod = "pix" | "dinheiro" | "credito" | "debito";
 
 export type UserRow = {
   id: string;
@@ -73,6 +74,19 @@ export type AppointmentRow = {
   updated_at: string;
 };
 
+export type PaymentRow = {
+  id: string;
+  appointment_id: string;
+  amount: number;
+  discount: number;
+  method: PaymentMethod | null;
+  paid: boolean;
+  notes: string | null;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
 type UserInsert = {
   id: string;
   full_name: string;
@@ -121,6 +135,17 @@ type AppointmentInsert = {
   created_by?: string | null;
 };
 
+type PaymentInsert = {
+  id?: string;
+  appointment_id: string;
+  amount: number;
+  discount?: number;
+  method?: PaymentMethod | null;
+  paid?: boolean;
+  notes?: string | null;
+  created_by?: string | null;
+};
+
 export type Database = {
   public: {
     Tables: {
@@ -152,6 +177,12 @@ export type Database = {
         Row: AppointmentRow;
         Insert: AppointmentInsert;
         Update: Partial<AppointmentInsert>;
+        Relationships: [];
+      };
+      payments: {
+        Row: PaymentRow;
+        Insert: PaymentInsert;
+        Update: Partial<PaymentInsert>;
         Relationships: [];
       };
     };

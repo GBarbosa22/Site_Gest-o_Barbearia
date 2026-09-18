@@ -2,39 +2,30 @@
 
 import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
-import { cancelAppointmentAction, markNoShowAction } from "@/app/(dashboard)/agenda/actions";
+import { cancelAttendanceAction } from "@/app/(dashboard)/atendimentos/actions";
 
-export function CancelAppointmentButton({ id, date }: { id: string; date: string }) {
+/** Para quando o atendimento foi lançado por engano — nunca apaga, só marca como cancelado. */
+export function CancelAttendanceButton({ id, date }: { id: string; date: string }) {
   const [pending, startTransition] = useTransition();
   const [confirming, setConfirming] = useState(false);
 
   if (!confirming) {
     return (
-      <div className="grid grid-cols-2 gap-2">
-        <Button type="button" variant="outline" onClick={() => setConfirming(true)}>
-          Cancelar agendamento
-        </Button>
-        <Button
-          type="button"
-          variant="outline"
-          disabled={pending}
-          onClick={() => startTransition(() => markNoShowAction(id, date))}
-        >
-          Não compareceu
-        </Button>
-      </div>
+      <Button type="button" variant="outline" className="w-full" onClick={() => setConfirming(true)}>
+        Cancelar (registrado por engano)
+      </Button>
     );
   }
 
   return (
     <div className="space-y-2 rounded-lg border border-destructive/40 p-4">
-      <p className="text-sm">Tem certeza que deseja cancelar este agendamento?</p>
+      <p className="text-sm">Tem certeza que deseja cancelar este atendimento?</p>
       <div className="flex gap-2">
         <Button
           type="button"
           variant="destructive"
           disabled={pending}
-          onClick={() => startTransition(() => cancelAppointmentAction(id, date))}
+          onClick={() => startTransition(() => cancelAttendanceAction(id, date))}
           className="flex-1"
         >
           {pending ? "Cancelando..." : "Confirmar cancelamento"}

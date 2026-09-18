@@ -9,13 +9,15 @@ export interface DashboardSummary {
   newClientsToday: number;
   activeSubscriptions: number;
   lowStockCount: number;
-  upcomingAppointments: UpcomingAppointment[];
+  recentAttendances: RecentAttendance[];
 }
 
-export interface UpcomingAppointment {
+export interface RecentAttendance {
   id: string;
   clientName: string;
   barberName: string;
   serviceName: string;
   startsAt: string;
+  amount: number | null;
+  paid: boolean | null;
 }

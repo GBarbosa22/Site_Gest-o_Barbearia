@@ -6,7 +6,7 @@ import { listAppointmentsByClient } from "@/services/appointments.service";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { AppointmentStatusBadge } from "@/components/appointments/status-badge";
-import { formatDate, formatTime } from "@/lib/utils";
+import { formatCurrency, formatDate, formatTime } from "@/lib/utils";
 
 export default async function ClienteDetalhePage({
   params,
@@ -84,7 +84,14 @@ export default async function ClienteDetalhePage({
                       {item.barber_name}
                     </p>
                   </div>
-                  <AppointmentStatusBadge status={item.status} />
+                  <div className="text-right">
+                    {item.payment ? (
+                      <p className="text-sm font-medium">
+                        {formatCurrency(Number(item.payment.amount) - Number(item.payment.discount))}
+                      </p>
+                    ) : null}
+                    <AppointmentStatusBadge status={item.status} />
+                  </div>
                 </CardContent>
               </Card>
             ))

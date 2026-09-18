@@ -1,6 +1,6 @@
 import { DollarSign, Scissors, Users, UserPlus, Package, CalendarCheck } from "lucide-react";
 import { StatCard } from "@/components/dashboard/stat-card";
-import { UpcomingAppointments } from "@/components/dashboard/upcoming-appointments";
+import { RecentAttendances } from "@/components/dashboard/recent-attendances";
 import { getDashboardSummary } from "@/services/dashboard.service";
 import { formatCurrency } from "@/lib/utils";
 
@@ -46,7 +46,7 @@ export default async function DashboardPage() {
         <StatCard title="Estoque baixo" value={String(summary.lowStockCount)} icon={Package} />
       </div>
 
-      <UpcomingAppointments items={summary.upcomingAppointments} />
+      <RecentAttendances items={summary.recentAttendances} />
     </div>
   );
 }

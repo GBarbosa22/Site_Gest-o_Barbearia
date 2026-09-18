@@ -1,13 +1,14 @@
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUserProfile } from "@/services/auth.service";
-import type { AppointmentRow, AppointmentStatus } from "@/types/database.types";
-import type { AppointmentInput } from "@/lib/validations/appointment";
+import { createPayment, updatePayment, type PaymentInput } from "@/services/payments.service";
+import type { AppointmentRow, AppointmentStatus, PaymentRow } from "@/types/database.types";
+import type { AttendanceInput } from "@/lib/validations/appointment";
 
-export interface AppointmentListItem extends AppointmentRow {
+export interface AttendanceListItem extends AppointmentRow {
   client_name: string;
   barber_name: string;
   service_name: string;
-  service_duration_minutes: number;
+  payment: PaymentRow | null;
 }
 
 function dayRange(dateISO: string) {
@@ -17,22 +18,43 @@ function dayRange(dateISO: string) {
   return { start: start.toISOString(), end: end.toISOString() };
 }
 
-/** Lista os agendamentos de um dia. Barbeiro só vê a própria agenda (RLS garante isso mesmo se barberId não for passado). */
-export async function listAppointmentsByDay(
+function toPaymentInput(input: AttendanceInput): PaymentInput {
+  return {
+    amount: input.amount,
+    discount: input.discount,
+    method: input.method === "" ? null : input.method,
+    notes: null,
+  };
+}
+
+function mapRow(row: any): AttendanceListItem {
+  return {
+    ...row,
+    client_name: row.clients?.full_name ?? "Cliente",
+    barber_name: row.barbers?.full_name ?? "Barbeiro",
+    service_name: row.services?.name ?? "Serviço",
+    payment: Array.isArray(row.payments) ? row.payments[0] ?? null : row.payments ?? null,
+  };
+}
+
+const SELECT_WITH_JOINS =
+  "*, clients(full_name), barbers(full_name), services(name), payments(*)";
+
+/** Lista os atendimentos registrados em um dia. Barbeiro só vê os próprios (RLS). */
+export async function listAttendancesByDay(
   dateISO: string,
   barberId?: string
-): Promise<AppointmentListItem[]> {
+): Promise<AttendanceListItem[]> {
   const supabase = await createClient();
   const { start, end } = dayRange(dateISO);
 
   let query = supabase
     .from("appointments")
-    .select(
-      "*, clients(full_name), barbers(full_name), services(name, duration_minutes)"
-    )
+    .select(SELECT_WITH_JOINS)
     .gte("starts_at", start)
     .lt("starts_at", end)
-    .order("starts_at", { ascending: true });
+    .neq("status", "cancelled")
+    .order("starts_at", { ascending: false });
 
   if (barberId) {
     query = query.eq("barber_id", barberId);
@@ -41,62 +63,42 @@ export async function listAppointmentsByDay(
   const { data, error } = await query;
   if (error) throw new Error(error.message);
 
-  return (data ?? []).map((row: any) => ({
-    ...row,
-    client_name: row.clients?.full_name ?? "Cliente",
-    barber_name: row.barbers?.full_name ?? "Barbeiro",
-    service_name: row.services?.name ?? "Serviço",
-    service_duration_minutes: row.services?.duration_minutes ?? 30,
-  }));
+  return (data ?? []).map(mapRow);
 }
 
-/** Histórico completo de um cliente (para a tela de detalhe do cliente). */
-export async function listAppointmentsByClient(clientId: string): Promise<AppointmentListItem[]> {
+export async function getAttendance(id: string): Promise<AttendanceListItem | null> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("appointments")
-    .select("*, clients(full_name), barbers(full_name), services(name, duration_minutes)")
+    .select(SELECT_WITH_JOINS)
+    .eq("id", id)
+    .single();
+
+  if (error || !data) return null;
+  return mapRow(data);
+}
+
+/** Histórico completo de um cliente (para a tela de detalhe do cliente). */
+export async function listAppointmentsByClient(clientId: string): Promise<AttendanceListItem[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("appointments")
+    .select(SELECT_WITH_JOINS)
     .eq("client_id", clientId)
     .order("starts_at", { ascending: false })
     .limit(30);
 
   if (error) throw new Error(error.message);
-
-  return (data ?? []).map((row: any) => ({
-    ...row,
-    client_name: row.clients?.full_name ?? "Cliente",
-    barber_name: row.barbers?.full_name ?? "Barbeiro",
-    service_name: row.services?.name ?? "Serviço",
-    service_duration_minutes: row.services?.duration_minutes ?? 30,
-  }));
+  return (data ?? []).map(mapRow);
 }
 
-export async function getAppointment(id: string): Promise<AppointmentListItem | null> {
-  const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("appointments")
-    .select("*, clients(full_name), barbers(full_name), services(name, duration_minutes)")
-    .eq("id", id)
-    .single();
-
-  if (error || !data) return null;
-  const row: any = data;
-  return {
-    ...row,
-    client_name: row.clients?.full_name ?? "Cliente",
-    barber_name: row.barbers?.full_name ?? "Barbeiro",
-    service_name: row.services?.name ?? "Serviço",
-    service_duration_minutes: row.services?.duration_minutes ?? 30,
-  };
-}
-
-function isOverlapError(error: { code?: string; message: string }) {
-  return error.code === "23P01" || error.message.includes("appointments_no_overlap");
-}
-
-export async function createAppointment(
-  input: AppointmentInput
-): Promise<{ error: string | null }> {
+/**
+ * Registra um atendimento que JÁ aconteceu: cria o registro (status
+ * "completed", horário = agora) e o pagamento (ou marca como pendente) numa
+ * única operação. Não há mais agendamento futuro nem checagem de conflito de
+ * horário — a barbearia já usa outro app para marcar horário com o cliente.
+ */
+export async function createAttendance(input: AttendanceInput): Promise<{ error: string | null }> {
   const supabase = await createClient();
 
   const { data: service, error: serviceError } = await supabase
@@ -109,49 +111,43 @@ export async function createAppointment(
     return { error: "Serviço não encontrado." };
   }
 
-  const startsAt = new Date(`${input.date}T${input.time}:00`);
+  const startsAt = new Date();
   const endsAt = new Date(startsAt.getTime() + service.duration_minutes * 60_000);
-
   const user = await getCurrentUserProfile();
 
-  const { error } = await supabase.from("appointments").insert({
-    client_id: input.client_id,
-    barber_id: input.barber_id,
-    service_id: input.service_id,
-    starts_at: startsAt.toISOString(),
-    ends_at: endsAt.toISOString(),
-    notes: input.notes || null,
-    created_by: user?.id ?? null,
-  });
+  const { data: appointment, error } = await supabase
+    .from("appointments")
+    .insert({
+      client_id: input.client_id,
+      barber_id: input.barber_id,
+      service_id: input.service_id,
+      starts_at: startsAt.toISOString(),
+      ends_at: endsAt.toISOString(),
+      status: "completed",
+      notes: input.notes || null,
+      created_by: user?.id ?? null,
+    })
+    .select("id")
+    .single();
 
-  if (error) {
-    if (isOverlapError(error)) {
-      return { error: "Esse barbeiro já tem outro atendimento nesse horário." };
-    }
-    return { error: error.message };
+  if (error || !appointment) {
+    return { error: error?.message ?? "Não foi possível registrar o atendimento." };
+  }
+
+  const { error: paymentError } = await createPayment(appointment.id, toPaymentInput(input));
+  if (paymentError) {
+    return { error: paymentError };
   }
 
   return { error: null };
 }
 
-export async function updateAppointment(
+/** Corrige um atendimento já registrado (cliente/serviço/valor/pagamento). */
+export async function updateAttendance(
   id: string,
-  input: AppointmentInput
+  input: AttendanceInput
 ): Promise<{ error: string | null }> {
   const supabase = await createClient();
-
-  const { data: service, error: serviceError } = await supabase
-    .from("services")
-    .select("duration_minutes")
-    .eq("id", input.service_id)
-    .single();
-
-  if (serviceError || !service) {
-    return { error: "Serviço não encontrado." };
-  }
-
-  const startsAt = new Date(`${input.date}T${input.time}:00`);
-  const endsAt = new Date(startsAt.getTime() + service.duration_minutes * 60_000);
 
   const { error } = await supabase
     .from("appointments")
@@ -159,20 +155,14 @@ export async function updateAppointment(
       client_id: input.client_id,
       barber_id: input.barber_id,
       service_id: input.service_id,
-      starts_at: startsAt.toISOString(),
-      ends_at: endsAt.toISOString(),
       notes: input.notes || null,
     })
     .eq("id", id);
 
-  if (error) {
-    if (isOverlapError(error)) {
-      return { error: "Esse barbeiro já tem outro atendimento nesse horário." };
-    }
-    return { error: error.message };
-  }
+  if (error) return { error: error.message };
 
-  return { error: null };
+  const { error: paymentError } = await updatePayment(id, toPaymentInput(input));
+  return { error: paymentError };
 }
 
 export async function updateAppointmentStatus(
