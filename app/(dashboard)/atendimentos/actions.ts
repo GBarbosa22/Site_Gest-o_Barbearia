@@ -18,15 +18,15 @@ export interface AttendanceFormState {
 
 function parseForm(formData: FormData) {
   return attendanceSchema.safeParse({
-    client_id: formData.get("client_id"),
-    barber_id: formData.get("barber_id"),
-    service_id: formData.get("service_id"),
+    client_id: formData.get("client_id") ?? "",
+    barber_id: formData.get("barber_id") ?? "",
+    service_id: formData.get("service_id") ?? "",
     amount: formData.get("amount") || 0,
     discount: formData.get("discount") || 0,
-    method: formData.get("method"),
-    due_date: formData.get("due_date"),
-    notes: formData.get("notes"),
-    subscription_id: formData.get("subscription_id"),
+    method: formData.get("method") ?? "",
+    due_date: formData.get("due_date") ?? "",
+    notes: formData.get("notes") ?? "",
+    subscription_id: formData.get("subscription_id") ?? "",
   });
 }
 
