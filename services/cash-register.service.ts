@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUserProfile } from "@/services/auth.service";
+import { logAudit } from "@/services/audit.service";
 import type { CashMovementCategory, CashRegisterRow, CashMovementRow } from "@/types/database.types";
 
 export interface CashMovementListItem extends CashMovementRow {
@@ -57,10 +58,18 @@ export async function openRegister(openingBalance: number): Promise<{ error: str
   const existing = await getOpenRegister();
   if (existing) return { error: "Já existe um caixa aberto." };
 
-  const { error } = await supabase.from("cash_registers").insert({
-    opening_balance: openingBalance,
-    opened_by: user?.id ?? null,
-  });
+  const { data, error } = await supabase
+    .from("cash_registers")
+    .insert({
+      opening_balance: openingBalance,
+      opened_by: user?.id ?? null,
+    })
+    .select("id")
+    .single();
+
+  if (data?.id) {
+    await logAudit("caixa_aberto", "cash_register", data.id, { saldo_inicial: openingBalance });
+  }
 
   return { error: error?.message ?? null };
 }
@@ -100,6 +109,14 @@ export async function closeRegister(
     })
     .eq("id", id);
 
+  if (!error) {
+    await logAudit("caixa_fechado", "cash_register", id, {
+      saldo_esperado: expectedBalance,
+      saldo_informado: informedBalance,
+      diferenca: difference,
+    });
+  }
+
   return { error: error?.message ?? null };
 }
 
@@ -115,14 +132,25 @@ export async function addManualMovement(input: {
   const register = await getOpenRegister();
   if (!register) return { error: "Não há caixa aberto." };
 
-  const { error } = await supabase.from("cash_movements").insert({
-    cash_register_id: register.id,
-    type: input.type,
-    category: input.category,
-    amount: input.amount,
-    description: input.description || null,
-    created_by: user?.id ?? null,
-  });
+  const { data, error } = await supabase
+    .from("cash_movements")
+    .insert({
+      cash_register_id: register.id,
+      type: input.type,
+      category: input.category,
+      amount: input.amount,
+      description: input.description || null,
+      created_by: user?.id ?? null,
+    })
+    .select("id")
+    .single();
+
+  if (data?.id) {
+    await logAudit("caixa_saida_registrada", "cash_register", register.id, {
+      categoria: input.category,
+      valor: input.amount,
+    });
+  }
 
   return { error: error?.message ?? null };
 }

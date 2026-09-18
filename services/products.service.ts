@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { logAudit } from "@/services/audit.service";
 import type { ProductRow } from "@/types/database.types";
 import type { ProductInput } from "@/lib/validations/product";
 
@@ -36,16 +37,25 @@ export async function getProduct(id: string): Promise<ProductRow | null> {
 
 export async function createProduct(input: ProductInput): Promise<{ error: string | null }> {
   const supabase = await createClient();
-  const { error } = await supabase.from("products").insert({
-    name: input.name,
-    category: input.category || null,
-    unit: input.unit,
-    cost: input.cost,
-    price: input.price,
-    quantity_on_hand: input.quantity_on_hand,
-    min_quantity: input.min_quantity,
-    active: input.active,
-  });
+  const { data, error } = await supabase
+    .from("products")
+    .insert({
+      name: input.name,
+      category: input.category || null,
+      unit: input.unit,
+      cost: input.cost,
+      price: input.price,
+      quantity_on_hand: input.quantity_on_hand,
+      min_quantity: input.min_quantity,
+      active: input.active,
+    })
+    .select("id")
+    .single();
+
+  if (data?.id) {
+    await logAudit("produto_criado", "product", data.id, { nome: input.name });
+  }
+
   return { error: error?.message ?? null };
 }
 
@@ -67,6 +77,14 @@ export async function updateProduct(
       active: input.active,
     })
     .eq("id", id);
+
+  if (!error) {
+    await logAudit("produto_editado", "product", id, {
+      nome: input.name,
+      quantidade: input.quantity_on_hand,
+    });
+  }
+
   return { error: error?.message ?? null };
 }
 
@@ -74,6 +92,11 @@ export async function updateProduct(
 export async function deactivateProduct(id: string): Promise<{ error: string | null }> {
   const supabase = await createClient();
   const { error } = await supabase.from("products").update({ active: false }).eq("id", id);
+
+  if (!error) {
+    await logAudit("produto_desativado", "product", id);
+  }
+
   return { error: error?.message ?? null };
 }
 

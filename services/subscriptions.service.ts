@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUserProfile } from "@/services/auth.service";
 import { recordAutoCashEntry } from "@/services/cash-register.service";
+import { logAudit } from "@/services/audit.service";
 import { computeSubscriptionState, type SubscriptionState } from "@/lib/subscription-logic";
 import type { PaymentMethod, SubscriptionRow } from "@/types/database.types";
 
@@ -151,6 +152,12 @@ export async function createSubscription(input: {
     return { error: error.message };
   }
 
+  await logAudit("plano_vendido", "subscription", data.id, {
+    cliente_id: input.clientId,
+    valor: input.price,
+    metodo: input.paymentMethod,
+  });
+
   if (input.paymentMethod === "dinheiro") {
     await recordAutoCashEntry({ category: "plano", amount: input.price, subscriptionId: data.id });
   }
@@ -161,6 +168,11 @@ export async function createSubscription(input: {
 export async function cancelSubscription(id: string): Promise<{ error: string | null }> {
   const supabase = await createClient();
   const { error } = await supabase.from("subscriptions").update({ status: "cancelled" }).eq("id", id);
+
+  if (!error) {
+    await logAudit("plano_cancelado", "subscription", id);
+  }
+
   return { error: error?.message ?? null };
 }
 
@@ -181,6 +193,11 @@ export async function useSubscriptionCredit(
   });
 
   if (error) return { error: error.message };
+
+  await logAudit("plano_usado", "subscription", subscriptionId, {
+    semana: weekNumber,
+    atendimento_id: appointmentId,
+  });
 
   const subscription = await getSubscription(subscriptionId);
   if (subscription && subscription.state.derivedStatus === "completed") {

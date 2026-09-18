@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { logAudit } from "@/services/audit.service";
 import type { UserRow } from "@/types/database.types";
 
 export interface AuthResult {
@@ -9,10 +10,14 @@ export interface AuthResult {
 export async function signIn(email: string, password: string): Promise<AuthResult> {
   const supabase = await createClient();
   const { error } = await supabase.auth.signInWithPassword({ email, password });
+  if (!error) {
+    await logAudit("login", "user");
+  }
   return { error: error?.message ?? null };
 }
 
 export async function signOut(): Promise<void> {
+  await logAudit("logout", "user");
   const supabase = await createClient();
   await supabase.auth.signOut();
 }

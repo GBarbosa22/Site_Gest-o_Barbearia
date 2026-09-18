@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUserProfile } from "@/services/auth.service";
 import { recordAutoCashEntry } from "@/services/cash-register.service";
+import { logAudit } from "@/services/audit.service";
 import type { PaymentMethod, SaleRow } from "@/types/database.types";
 
 export interface SaleItemInput {
@@ -118,6 +119,11 @@ export async function createSale(input: CreateSaleInput): Promise<{ error: strin
 
   if (itemsError) return { error: itemsError.message };
 
+  await logAudit("venda_registrada", "sale", sale.id, {
+    total,
+    itens: input.items.length,
+  });
+
   for (const item of input.items) {
     await supabase.rpc("sell_product_stock", {
       p_product_id: item.product_id,
@@ -150,6 +156,8 @@ export async function markSalePaid(
     .single();
 
   if (error) return { error: error.message };
+
+  await logAudit("venda_paga", "sale", data.id, { metodo: method });
 
   if (method === "dinheiro") {
     await recordAutoCashEntry({

@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { logAudit } from "@/services/audit.service";
 import type { ClientRow } from "@/types/database.types";
 import type { ClientInput } from "@/lib/validations/client";
 
@@ -43,6 +44,10 @@ export async function createClientRecord(
     .select("id")
     .single();
 
+  if (data?.id) {
+    await logAudit("cliente_criado", "client", data.id, { nome: input.full_name });
+  }
+
   return { id: data?.id ?? null, error: error?.message ?? null };
 }
 
@@ -62,6 +67,11 @@ export async function updateClient(
       preferred_barber_id: input.preferred_barber_id || null,
     })
     .eq("id", id);
+
+  if (!error) {
+    await logAudit("cliente_editado", "client", id, { nome: input.full_name });
+  }
+
   return { error: error?.message ?? null };
 }
 

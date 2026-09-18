@@ -8,6 +8,7 @@ import {
 } from "@/services/payments.service";
 import { getSubscription, useSubscriptionCredit } from "@/services/subscriptions.service";
 import { consumeServiceRecipe } from "@/services/products.service";
+import { logAudit } from "@/services/audit.service";
 import type { AppointmentRow, AppointmentStatus, PaymentRow } from "@/types/database.types";
 import type { AttendanceInput } from "@/lib/validations/appointment";
 
@@ -142,6 +143,11 @@ export async function createAttendance(input: AttendanceInput): Promise<{ error:
     return { error: error?.message ?? "Não foi possível registrar o atendimento." };
   }
 
+  await logAudit("atendimento_registrado", "appointment", appointment.id, {
+    cliente_id: input.client_id,
+    servico_id: input.service_id,
+  });
+
   // Desconta do estoque os produtos da "receita" do serviço (ex.: pigmentação
   // consome 1 sachê de tinta), independente da forma de pagamento usada.
   await consumeServiceRecipe(input.service_id, appointment.id);
@@ -187,6 +193,11 @@ export async function updateAttendance(
 
   if (error) return { error: error.message };
 
+  await logAudit("atendimento_editado", "appointment", id, {
+    cliente_id: input.client_id,
+    servico_id: input.service_id,
+  });
+
   // Atendimentos pagos com crédito do plano não têm registro de pagamento —
   // não há o que atualizar financeiramente nesse caso.
   const existingPayment = await getPaymentByAppointment(id);
@@ -202,5 +213,10 @@ export async function updateAppointmentStatus(
 ): Promise<{ error: string | null }> {
   const supabase = await createClient();
   const { error } = await supabase.from("appointments").update({ status }).eq("id", id);
+
+  if (!error && status === "cancelled") {
+    await logAudit("atendimento_cancelado", "appointment", id);
+  }
+
   return { error: error?.message ?? null };
 }

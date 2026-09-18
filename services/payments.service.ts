@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUserProfile } from "@/services/auth.service";
 import { recordAutoCashEntry } from "@/services/cash-register.service";
+import { logAudit } from "@/services/audit.service";
 import type { PaymentMethod, PaymentRow } from "@/types/database.types";
 
 export interface PaymentInput {
@@ -36,6 +37,13 @@ export async function createPayment(
     .single();
 
   if (error) return { error: error.message };
+
+  if (input.method !== null) {
+    await logAudit("pagamento_recebido", "payment", data.id, {
+      metodo: input.method,
+      valor: input.amount - input.discount,
+    });
+  }
 
   if (input.method === "dinheiro") {
     await recordAutoCashEntry({
@@ -92,6 +100,11 @@ export async function markPaymentPaid(
     .single();
 
   if (error) return { error: error.message };
+
+  await logAudit("pagamento_recebido", "payment", data.id, {
+    metodo: method,
+    valor: Number(data.amount) - Number(data.discount),
+  });
 
   if (method === "dinheiro") {
     await recordAutoCashEntry({

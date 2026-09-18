@@ -6,6 +6,7 @@ import { Select } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ExportCsvButton } from "@/components/financeiro/export-csv-button";
+import { PrintButton } from "@/components/financeiro/print-button";
 import { formatCurrency, toISODateString } from "@/lib/utils";
 
 type Period = "hoje" | "semana" | "mes" | "personalizado";
@@ -82,7 +83,7 @@ export default async function FinanceiroPage({
         <p className="text-sm text-muted-foreground">Indicadores do período selecionado.</p>
       </div>
 
-      <form className="flex flex-wrap items-end gap-2">
+      <form className="flex flex-wrap items-end gap-2 print:hidden">
         <div className="space-y-1">
           <label className="text-xs text-muted-foreground">Período</label>
           <Select name="period" defaultValue={period} className="w-40">
@@ -231,7 +232,10 @@ export default async function FinanceiroPage({
         </Card>
       </div>
 
-      <ExportCsvButton rows={csvRows} filename={`financeiro-${period}.csv`} />
+      <div className="flex gap-2 print:hidden">
+        <ExportCsvButton rows={csvRows} filename={`financeiro-${period}.csv`} />
+        <PrintButton />
+      </div>
     </div>
   );
 }

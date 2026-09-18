@@ -17,7 +17,7 @@ function initials(name: string) {
 export function Header({ user }: { user: UserRow }) {
   return (
     <header
-      className="flex h-16 items-center justify-between border-b border-border bg-background px-4 pt-[env(safe-area-inset-top)] md:px-8 md:pt-0"
+      className="flex h-16 items-center justify-between border-b border-border bg-background px-4 pt-[env(safe-area-inset-top)] md:px-8 md:pt-0 print:hidden"
       style={{ height: "calc(4rem + env(safe-area-inset-top))" }}
     >
       <div>

@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { logAudit } from "@/services/audit.service";
 import type { BarberRow } from "@/types/database.types";
 import type { BarberInput } from "@/lib/validations/barber";
 
@@ -36,11 +37,20 @@ export async function getBarber(id: string): Promise<BarberRow | null> {
 
 export async function createBarber(input: BarberInput): Promise<{ error: string | null }> {
   const supabase = await createClient();
-  const { error } = await supabase.from("barbers").insert({
-    full_name: input.full_name,
-    phone: input.phone || null,
-    active: input.active,
-  });
+  const { data, error } = await supabase
+    .from("barbers")
+    .insert({
+      full_name: input.full_name,
+      phone: input.phone || null,
+      active: input.active,
+    })
+    .select("id")
+    .single();
+
+  if (data?.id) {
+    await logAudit("barbeiro_criado", "barber", data.id, { nome: input.full_name });
+  }
+
   return { error: error?.message ?? null };
 }
 
@@ -57,6 +67,11 @@ export async function updateBarber(
       active: input.active,
     })
     .eq("id", id);
+
+  if (!error) {
+    await logAudit("barbeiro_editado", "barber", id, { nome: input.full_name });
+  }
+
   return { error: error?.message ?? null };
 }
 
@@ -64,5 +79,10 @@ export async function updateBarber(
 export async function deactivateBarber(id: string): Promise<{ error: string | null }> {
   const supabase = await createClient();
   const { error } = await supabase.from("barbers").update({ active: false }).eq("id", id);
+
+  if (!error) {
+    await logAudit("barbeiro_desativado", "barber", id);
+  }
+
   return { error: error?.message ?? null };
 }

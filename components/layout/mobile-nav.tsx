@@ -64,7 +64,7 @@ export function MobileNav({ role }: { role: UserRole }) {
       ) : null}
 
       <nav
-        className="fixed inset-x-0 bottom-0 z-30 flex border-t border-border bg-card pb-[env(safe-area-inset-bottom)] md:hidden"
+        className="fixed inset-x-0 bottom-0 z-30 flex border-t border-border bg-card pb-[env(safe-area-inset-bottom)] md:hidden print:hidden"
         aria-label="Navegação principal"
       >
         {primary.map((item) => {

@@ -3,6 +3,7 @@ import { requireAdmin } from "@/services/auth.service";
 import { getRegister, listMovements } from "@/services/cash-register.service";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { PrintButton } from "@/components/financeiro/print-button";
 import { formatCurrency, formatDate, formatTime } from "@/lib/utils";
 
 const CATEGORY_LABEL: Record<string, string> = {
@@ -123,6 +124,12 @@ export default async function CaixaDetalhePage({ params }: { params: Promise<{ i
           )}
         </div>
       </div>
+
+      {register.status === "closed" ? (
+        <div className="print:hidden">
+          <PrintButton />
+        </div>
+      ) : null}
     </div>
   );
 }

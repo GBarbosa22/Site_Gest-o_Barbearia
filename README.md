@@ -49,6 +49,18 @@ Hospedagem gratuita: Vercel (front-end) + Supabase (backend/banco), sem servidor
   novos/recorrentes, ranking de serviços e produtos mais vendidos, faturamento por barbeiro, e
   exportação em CSV (abre no Excel).
 
+## Fase 5 (entregue)
+
+- **Auditoria** (`supabase/migrations/0008_audit_log.sql`, `/auditoria`, admin): histórico completo
+  de ações (login, cadastros, atendimentos, pagamentos, planos, vendas, caixa...). Nunca é apagado
+  nem editado — só inserido. Qualquer usuário grava a própria ação; só admin lê o histórico.
+- **PWA completo**: service worker real (`public/sw.js`) para instalar como app e ter uma tela de
+  fallback offline (`/offline`) quando a internet cai — os dados (clientes, agenda, caixa...)
+  continuam sempre vindo da rede quando disponível, só o "app shell" fica em cache.
+- **Exportar PDF**: botão "Exportar PDF" no Financeiro e no fechamento de caixa usa a função de
+  impressão do navegador (imprimir → salvar como PDF) com um layout específico pra impressão — sem
+  depender de nenhum serviço externo.
+
 ## Pré-requisitos
 
 1. Instalar o [Node.js LTS](https://nodejs.org) (não está instalado nesta máquina — instale antes
@@ -71,7 +83,7 @@ cp .env.local.example .env.local
 Rode as migrações no seu projeto Supabase, na ordem, colando cada arquivo no SQL Editor e
 clicando Run: `0001_init.sql`, `0002_payments.sql`, `0003_subscriptions.sql`,
 `0004_cash_register.sql`, `0005_products.sql`, `0006_one_active_subscription.sql`,
-`0007_sales.sql`. Ou via CLI:
+`0007_sales.sql`, `0008_audit_log.sql`. Ou via CLI:
 
 ```bash
 npx supabase link --project-ref SEU_PROJECT_REF
@@ -100,15 +112,17 @@ Acesse `http://localhost:3000` — você será redirecionado para `/login`.
 
 ## Ícones do PWA
 
-Adicione `icon-192.png` e `icon-512.png` em `public/icons/` (serão criados/lapidados na Fase 5,
-junto com o service worker de instalação).
+A logo em `public/icons/icon-192.jpeg` e `icon-512.jpeg` está reaproveitada nos dois tamanhos —
+funciona, mas fica levemente pixelada em telas grandes. Se quiser, exporte uma versão 512×512 real
+mais pra frente e troque o arquivo `icon-512.jpeg`.
 
 ## Deploy
 
 Suba o repositório para o GitHub e importe na [Vercel](https://vercel.com) (plano free). Configure
 as variáveis de ambiente do `.env.local` no painel do projeto na Vercel.
 
-## Próximas fases
+## Próximos passos (fora do escopo original das 5 fases)
 
-- **Fase 5:** Auditoria, relatórios avançados (PDF), PWA completo (service worker), refinamento
-  visual.
+- Refinamento visual (skeleton loading em mais telas, micro-animações).
+- Relatórios em Excel de verdade (hoje é CSV, que já abre no Excel).
+- Ícone 512×512 nativo, sem reaproveitar o de 192.

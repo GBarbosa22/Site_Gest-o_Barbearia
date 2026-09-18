@@ -372,6 +372,27 @@ type SaleItemInsert = {
   subtotal: number;
 };
 
+export type AuditLogRow = {
+  id: string;
+  actor_id: string | null;
+  actor_name: string | null;
+  action: string;
+  entity: string;
+  entity_id: string | null;
+  details: Record<string, unknown> | null;
+  created_at: string;
+};
+
+type AuditLogInsert = {
+  id?: string;
+  actor_id?: string | null;
+  actor_name?: string | null;
+  action: string;
+  entity: string;
+  entity_id?: string | null;
+  details?: Record<string, unknown> | null;
+};
+
 export type Database = {
   public: {
     Tables: {
@@ -463,6 +484,12 @@ export type Database = {
         Row: SaleItemRow;
         Insert: SaleItemInsert;
         Update: Partial<SaleItemInsert>;
+        Relationships: [];
+      };
+      audit_logs: {
+        Row: AuditLogRow;
+        Insert: AuditLogInsert;
+        Update: Partial<AuditLogInsert>;
         Relationships: [];
       };
     };

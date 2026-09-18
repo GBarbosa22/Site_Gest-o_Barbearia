@@ -12,7 +12,7 @@ export function Sidebar({ role }: { role: UserRole }) {
   const items = NAV_ITEMS.filter((item) => !item.adminOnly || role === "admin");
 
   return (
-    <aside className="hidden w-60 shrink-0 border-r border-border bg-card md:flex md:flex-col">
+    <aside className="hidden w-60 shrink-0 border-r border-border bg-card md:flex md:flex-col print:hidden">
       <div className="flex h-16 items-center px-6">
         <Image src="/logo.jpeg" alt="Barbearia Gentlemen" width={36} height={24} className="rounded" />
         <span className="ml-2 text-sm font-semibold uppercase tracking-[0.15em] text-gold">
