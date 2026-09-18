@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Pencil, Phone, MessageCircle, Cake, Plus } from "lucide-react";
 import { getClient } from "@/services/clients.service";
+import { getCurrentUserProfile } from "@/services/auth.service";
 import { listAppointmentsByClient } from "@/services/appointments.service";
 import { listSubscriptionsForClient } from "@/services/subscriptions.service";
 import { Button } from "@/components/ui/button";
@@ -9,6 +10,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { AppointmentStatusBadge } from "@/components/appointments/status-badge";
 import { WeeksProgress } from "@/components/subscriptions/weeks-progress";
+import { CancelSubscriptionButton } from "@/components/subscriptions/cancel-subscription-button";
 import { formatCurrency, formatDate, formatTime } from "@/lib/utils";
 
 const SUBSCRIPTION_STATUS_LABEL: Record<string, string> = {
@@ -27,10 +29,12 @@ export default async function ClienteDetalhePage({
   const client = await getClient(id);
   if (!client) notFound();
 
-  const [history, subscriptions] = await Promise.all([
+  const [history, subscriptions, user] = await Promise.all([
     listAppointmentsByClient(client.id),
     listSubscriptionsForClient(client.id),
+    getCurrentUserProfile(),
   ]);
+  const isAdmin = user?.role === "admin";
   const whatsappNumber = (client.whatsapp || client.phone || "").replace(/\D/g, "");
 
   return (
@@ -115,6 +119,9 @@ export default async function ClienteDetalhePage({
                     </Badge>
                   </div>
                   <WeeksProgress state={sub.state} />
+                  {isAdmin && sub.status === "active" ? (
+                    <CancelSubscriptionButton id={sub.id} />
+                  ) : null}
                 </CardContent>
               </Card>
             ))}

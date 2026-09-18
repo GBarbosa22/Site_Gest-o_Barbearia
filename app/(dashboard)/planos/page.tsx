@@ -1,13 +1,19 @@
 import Link from "next/link";
 import { Plus } from "lucide-react";
 import { listActiveSubscriptions } from "@/services/subscriptions.service";
+import { getCurrentUserProfile } from "@/services/auth.service";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { WeeksProgress } from "@/components/subscriptions/weeks-progress";
+import { CancelSubscriptionButton } from "@/components/subscriptions/cancel-subscription-button";
 import { formatCurrency, formatDate } from "@/lib/utils";
 
 export default async function PlanosPage() {
-  const subscriptions = await listActiveSubscriptions();
+  const [subscriptions, user] = await Promise.all([
+    listActiveSubscriptions(),
+    getCurrentUserProfile(),
+  ]);
+  const isAdmin = user?.role === "admin";
 
   return (
     <div className="space-y-6">
@@ -45,6 +51,7 @@ export default async function PlanosPage() {
                   </Link>
                 </div>
                 <WeeksProgress state={sub.state} />
+                {isAdmin ? <CancelSubscriptionButton id={sub.id} /> : null}
               </CardContent>
             </Card>
           ))

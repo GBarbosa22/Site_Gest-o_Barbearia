@@ -2,7 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { createSubscription, cancelSubscription } from "@/services/subscriptions.service";
+import { requireAdmin } from "@/services/auth.service";
+import { createSubscription, cancelSubscription, getSubscription } from "@/services/subscriptions.service";
 import { subscriptionSchema } from "@/lib/validations/subscription";
 
 export interface SubscriptionFormState {
@@ -37,6 +38,11 @@ export async function createSubscriptionAction(
 }
 
 export async function cancelSubscriptionAction(id: string) {
+  await requireAdmin();
+  const subscription = await getSubscription(id);
   await cancelSubscription(id);
   revalidatePath("/planos");
+  if (subscription) {
+    revalidatePath(`/clientes/${subscription.client_id}`);
+  }
 }

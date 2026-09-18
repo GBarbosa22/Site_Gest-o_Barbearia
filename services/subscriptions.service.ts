@@ -123,6 +123,14 @@ export async function createSubscription(input: {
   const supabase = await createClient();
   const user = await getCurrentUserProfile();
 
+  // listSubscriptionsForClient já sincroniza o status derivado (expirado/
+  // completo) antes de checar — evita bloquear por um plano que só não foi
+  // "lido" ainda desde que venceu.
+  const existing = await listSubscriptionsForClient(input.clientId);
+  if (existing.some((s) => s.status === "active")) {
+    return { error: "Este cliente já tem um plano ativo. Cancele o atual antes de vender outro." };
+  }
+
   const { data, error } = await supabase
     .from("subscriptions")
     .insert({
@@ -136,7 +144,12 @@ export async function createSubscription(input: {
     .select("id")
     .single();
 
-  if (error) return { error: error.message };
+  if (error) {
+    if (error.code === "23505" || error.message.includes("subscriptions_one_active_per_client")) {
+      return { error: "Este cliente já tem um plano ativo. Cancele o atual antes de vender outro." };
+    }
+    return { error: error.message };
+  }
 
   if (input.paymentMethod === "dinheiro") {
     await recordAutoCashEntry({ category: "plano", amount: input.price, subscriptionId: data.id });
