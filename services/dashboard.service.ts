@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { getRevenueBetween } from "@/services/payments.service";
+import { listActiveSubscriptions } from "@/services/subscriptions.service";
 import type { DashboardSummary, RecentAttendance } from "@/types";
 
 function startOfDayISO(date = new Date()) {
@@ -37,6 +38,7 @@ export async function getDashboardSummary(): Promise<DashboardSummary> {
     revenueToday,
     revenueWeek,
     revenueMonth,
+    activeSubscriptions,
   ] = await Promise.all([
     supabase
       .from("appointments")
@@ -59,6 +61,7 @@ export async function getDashboardSummary(): Promise<DashboardSummary> {
     getRevenueBetween(todayStart, now),
     getRevenueBetween(startOfWeekISO(), now),
     getRevenueBetween(startOfMonthISO(), now),
+    listActiveSubscriptions(),
   ]);
 
   const distinctClientsToday = await supabase
@@ -91,7 +94,7 @@ export async function getDashboardSummary(): Promise<DashboardSummary> {
     cutsToday: cutsToday ?? 0,
     clientsAttendedToday,
     newClientsToday: newClientsToday ?? 0,
-    activeSubscriptions: 0,
+    activeSubscriptions: activeSubscriptions.length,
     lowStockCount: 0,
     recentAttendances,
   };

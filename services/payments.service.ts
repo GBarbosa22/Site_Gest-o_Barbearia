@@ -7,6 +7,8 @@ export interface PaymentInput {
   discount: number;
   /** null = "vai pagar depois" (pendente). */
   method: PaymentMethod | null;
+  /** Data prevista de recebimento — só relevante quando method é null. */
+  dueDate?: string | null;
   notes?: string | null;
 }
 
@@ -23,6 +25,7 @@ export async function createPayment(
     discount: input.discount,
     method: input.method,
     paid: input.method !== null,
+    due_date: input.method === null ? input.dueDate || null : null,
     notes: input.notes || null,
     created_by: user?.id ?? null,
   });
@@ -53,6 +56,7 @@ export async function updatePayment(
       discount: input.discount,
       method: input.method,
       paid: input.method !== null,
+      due_date: input.method === null ? input.dueDate || null : null,
       notes: input.notes || null,
     })
     .eq("appointment_id", appointmentId);
@@ -67,7 +71,7 @@ export async function markPaymentPaid(
   const supabase = await createClient();
   const { error } = await supabase
     .from("payments")
-    .update({ method, paid: true })
+    .update({ method, paid: true, due_date: null })
     .eq("appointment_id", appointmentId);
   return { error: error?.message ?? null };
 }
@@ -83,4 +87,23 @@ export async function getRevenueBetween(startISO: string, endISO: string): Promi
 
   if (error || !data) return 0;
   return data.reduce((sum, row) => sum + Number(row.amount) - Number(row.discount), 0);
+}
+
+/** Pagamentos pendentes ("vai pagar depois"), ordenados pela data prevista. */
+export async function listPendingPayments(): Promise<
+  (PaymentRow & { client_name: string; barber_name: string })[]
+> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("payments")
+    .select("*, appointments(clients(full_name), barbers(full_name))")
+    .eq("paid", false)
+    .order("due_date", { ascending: true, nullsFirst: true });
+
+  if (error) return [];
+  return (data ?? []).map((row: any) => ({
+    ...row,
+    client_name: row.appointments?.clients?.full_name ?? "Cliente",
+    barber_name: row.appointments?.barbers?.full_name ?? "Barbeiro",
+  }));
 }

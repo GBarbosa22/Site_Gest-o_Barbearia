@@ -14,7 +14,6 @@ function parseForm(formData: FormData) {
   return barberSchema.safeParse({
     full_name: formData.get("full_name"),
     phone: formData.get("phone"),
-    commission_percent: formData.get("commission_percent") || 0,
     active: formData.get("active") === "on",
   });
 }

@@ -1,6 +1,12 @@
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUserProfile } from "@/services/auth.service";
-import { createPayment, updatePayment, type PaymentInput } from "@/services/payments.service";
+import {
+  createPayment,
+  updatePayment,
+  getPaymentByAppointment,
+  type PaymentInput,
+} from "@/services/payments.service";
+import { getSubscription, useSubscriptionCredit } from "@/services/subscriptions.service";
 import type { AppointmentRow, AppointmentStatus, PaymentRow } from "@/types/database.types";
 import type { AttendanceInput } from "@/lib/validations/appointment";
 
@@ -23,6 +29,7 @@ function toPaymentInput(input: AttendanceInput): PaymentInput {
     amount: input.amount,
     discount: input.discount,
     method: input.method === "" ? null : input.method,
+    dueDate: input.due_date || null,
     notes: null,
   };
 }
@@ -134,6 +141,20 @@ export async function createAttendance(input: AttendanceInput): Promise<{ error:
     return { error: error?.message ?? "Não foi possível registrar o atendimento." };
   }
 
+  if (input.subscription_id) {
+    const subscription = await getSubscription(input.subscription_id);
+    if (!subscription || !subscription.state.isActiveNow) {
+      return { error: "Esse plano não tem crédito disponível para esta semana." };
+    }
+    const { error: useError } = await useSubscriptionCredit(
+      input.subscription_id,
+      subscription.state.weekIndexNow,
+      appointment.id
+    );
+    if (useError) return { error: useError };
+    return { error: null };
+  }
+
   const { error: paymentError } = await createPayment(appointment.id, toPaymentInput(input));
   if (paymentError) {
     return { error: paymentError };
@@ -160,6 +181,11 @@ export async function updateAttendance(
     .eq("id", id);
 
   if (error) return { error: error.message };
+
+  // Atendimentos pagos com crédito do plano não têm registro de pagamento —
+  // não há o que atualizar financeiramente nesse caso.
+  const existingPayment = await getPaymentByAppointment(id);
+  if (!existingPayment) return { error: null };
 
   const { error: paymentError } = await updatePayment(id, toPaymentInput(input));
   return { error: paymentError };

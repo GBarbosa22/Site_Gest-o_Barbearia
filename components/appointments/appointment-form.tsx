@@ -3,13 +3,15 @@
 import { useFormState } from "react-dom";
 import { useState } from "react";
 import Link from "next/link";
+import { Ticket } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { SubmitButton } from "@/components/forms/submit-button";
-import { cn } from "@/lib/utils";
+import { cn, formatCurrency, toISODateString } from "@/lib/utils";
 import type { AttendanceListItem } from "@/services/appointments.service";
+import type { UsableSubscription } from "@/services/subscriptions.service";
 import type { BarberRow, ClientRow, ServiceRow, PaymentMethod } from "@/types/database.types";
 import type { AttendanceFormState } from "@/app/(dashboard)/atendimentos/actions";
 
@@ -29,6 +31,8 @@ interface AttendanceFormProps {
   /** Quando o usuário logado é barbeiro, o atendimento fica travado nele. */
   lockedBarber?: BarberRow | null;
   attendance?: AttendanceListItem;
+  /** client_id -> plano com crédito disponível nesta semana. */
+  usableSubscriptionsByClient?: Record<string, UsableSubscription>;
 }
 
 export function AppointmentForm({
@@ -38,15 +42,19 @@ export function AppointmentForm({
   barbers,
   lockedBarber,
   attendance,
+  usableSubscriptionsByClient = {},
 }: AttendanceFormProps) {
   const [state, formAction] = useFormState<AttendanceFormState, FormData>(action, {
     error: null,
   });
 
+  const [clientId, setClientId] = useState(attendance?.client_id ?? "");
   const [selectedServiceId, setSelectedServiceId] = useState(attendance?.service_id ?? "");
   const [amount, setAmount] = useState<string>(
     attendance?.payment ? String(attendance.payment.amount) : ""
   );
+  const [method, setMethod] = useState<PaymentMethod | "">(attendance?.payment?.method ?? "debito");
+  const [usePlan, setUsePlan] = useState(false);
 
   function handleServiceChange(serviceId: string) {
     setSelectedServiceId(serviceId);
@@ -54,7 +62,8 @@ export function AppointmentForm({
     if (service) setAmount(String(service.price));
   }
 
-  const defaultMethod: PaymentMethod | "" = attendance?.payment?.method ?? "";
+  const usableSubscription = clientId ? usableSubscriptionsByClient[clientId] : undefined;
+  const showPlanToggle = !attendance && !!usableSubscription;
 
   return (
     <form action={formAction} className="space-y-5">
@@ -65,13 +74,23 @@ export function AppointmentForm({
             Cadastrar novo
           </Link>
         </div>
-        <Select id="client_id" name="client_id" defaultValue={attendance?.client_id ?? ""} required>
+        <Select
+          id="client_id"
+          name="client_id"
+          value={clientId}
+          onChange={(e) => {
+            setClientId(e.target.value);
+            setUsePlan(false);
+          }}
+          required
+        >
           <option value="" disabled>
             Selecione o cliente
           </option>
           {clients.map((client) => (
             <option key={client.id} value={client.id}>
               {client.full_name}
+              {usableSubscriptionsByClient[client.id] ? " · tem plano disponível" : ""}
             </option>
           ))}
         </Select>
@@ -120,57 +139,101 @@ export function AppointmentForm({
         </Select>
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label htmlFor="amount">Valor (R$)</Label>
-          <Input
-            id="amount"
-            name="amount"
-            type="number"
-            min={0}
-            step="0.01"
-            value={amount}
-            onChange={(e) => setAmount(e.target.value)}
-            required
+      {showPlanToggle ? (
+        <label
+          className={cn(
+            "flex cursor-pointer items-center gap-3 rounded-lg border p-4 transition-colors",
+            usePlan ? "border-gold bg-gold/10" : "border-border"
+          )}
+        >
+          <input
+            type="checkbox"
+            name="use_plan"
+            checked={usePlan}
+            onChange={(e) => setUsePlan(e.target.checked)}
+            className="h-5 w-5 accent-current"
           />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="discount">Desconto (R$)</Label>
-          <Input
-            id="discount"
-            name="discount"
-            type="number"
-            min={0}
-            step="0.01"
-            defaultValue={attendance?.payment?.discount ?? 0}
-          />
-        </div>
-      </div>
+          <Ticket className="h-5 w-5 text-gold" />
+          <div className="flex-1">
+            <p className="text-sm font-medium">Usar corte do plano</p>
+            <p className="text-xs text-muted-foreground">
+              Cliente tem crédito disponível nesta semana — não cobra separado.
+            </p>
+          </div>
+        </label>
+      ) : null}
 
-      <div className="space-y-2">
-        <Label>Pagamento</Label>
-        <div className="grid grid-cols-3 gap-2">
-          {PAYMENT_OPTIONS.map((option) => (
-            <label
-              key={option.value || "pendente"}
-              className={cn(
-                "flex cursor-pointer items-center justify-center rounded-md border border-input px-2 py-2.5 text-sm font-medium transition-colors has-[:checked]:border-gold has-[:checked]:bg-gold/10 has-[:checked]:text-gold",
-                option.value === "" && "col-span-3"
-              )}
-            >
-              <input
-                type="radio"
-                name="method"
-                value={option.value}
-                defaultChecked={defaultMethod === option.value}
-                className="sr-only"
+      {usePlan && usableSubscription ? (
+        <input type="hidden" name="subscription_id" value={usableSubscription.id} />
+      ) : (
+        <>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="amount">Valor (R$)</Label>
+              <Input
+                id="amount"
+                name="amount"
+                type="number"
+                min={0}
+                step="0.01"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
                 required
               />
-              {option.label}
-            </label>
-          ))}
-        </div>
-      </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="discount">Desconto (R$)</Label>
+              <Input
+                id="discount"
+                name="discount"
+                type="number"
+                min={0}
+                step="0.01"
+                defaultValue={attendance?.payment?.discount ?? 0}
+              />
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Pagamento</Label>
+            <div className="grid grid-cols-3 gap-2">
+              {PAYMENT_OPTIONS.map((option) => (
+                <label
+                  key={option.value || "pendente"}
+                  className={cn(
+                    "flex cursor-pointer items-center justify-center rounded-md border border-input px-2 py-2.5 text-sm font-medium transition-colors has-[:checked]:border-gold has-[:checked]:bg-gold/10 has-[:checked]:text-gold",
+                    option.value === "" && "col-span-3"
+                  )}
+                >
+                  <input
+                    type="radio"
+                    name="method"
+                    value={option.value}
+                    checked={method === option.value}
+                    onChange={() => setMethod(option.value)}
+                    className="sr-only"
+                  />
+                  {option.label}
+                </label>
+              ))}
+            </div>
+          </div>
+
+          {method === "" ? (
+            <div className="space-y-2">
+              <Label htmlFor="due_date">Data prevista para o pagamento</Label>
+              <Input
+                id="due_date"
+                name="due_date"
+                type="date"
+                min={toISODateString(new Date())}
+                defaultValue={attendance?.payment?.due_date ?? toISODateString(new Date())}
+                required
+              />
+            </div>
+          ) : null}
+        </>
+      )}
 
       <div className="space-y-2">
         <Label htmlFor="notes">Observações</Label>
@@ -184,7 +247,11 @@ export function AppointmentForm({
       ) : null}
 
       <SubmitButton variant="gold" className="w-full">
-        {attendance ? "Salvar alterações" : "Registrar atendimento"}
+        {attendance
+          ? "Salvar alterações"
+          : usePlan
+            ? "Registrar atendimento (plano)"
+            : `Registrar atendimento${amount ? ` · ${formatCurrency(Number(amount))}` : ""}`}
       </SubmitButton>
     </form>
   );

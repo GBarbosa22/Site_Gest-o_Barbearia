@@ -1,12 +1,22 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Pencil, Phone, MessageCircle, Cake } from "lucide-react";
+import { Pencil, Phone, MessageCircle, Cake, Plus } from "lucide-react";
 import { getClient } from "@/services/clients.service";
 import { listAppointmentsByClient } from "@/services/appointments.service";
+import { listSubscriptionsForClient } from "@/services/subscriptions.service";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { AppointmentStatusBadge } from "@/components/appointments/status-badge";
+import { WeeksProgress } from "@/components/subscriptions/weeks-progress";
 import { formatCurrency, formatDate, formatTime } from "@/lib/utils";
+
+const SUBSCRIPTION_STATUS_LABEL: Record<string, string> = {
+  active: "Ativo",
+  completed: "Concluído",
+  expired: "Expirado",
+  cancelled: "Cancelado",
+};
 
 export default async function ClienteDetalhePage({
   params,
@@ -17,7 +27,10 @@ export default async function ClienteDetalhePage({
   const client = await getClient(id);
   if (!client) notFound();
 
-  const history = await listAppointmentsByClient(client.id);
+  const [history, subscriptions] = await Promise.all([
+    listAppointmentsByClient(client.id),
+    listSubscriptionsForClient(client.id),
+  ]);
   const whatsappNumber = (client.whatsapp || client.phone || "").replace(/\D/g, "");
 
   return (
@@ -67,6 +80,47 @@ export default async function ClienteDetalhePage({
           <CardContent className="p-4 text-sm text-muted-foreground">{client.notes}</CardContent>
         </Card>
       ) : null}
+
+      <div>
+        <div className="mb-3 flex items-center justify-between">
+          <h2 className="text-sm font-semibold text-muted-foreground">Plano de 4 cortes</h2>
+          <Button asChild variant="ghost" size="sm">
+            <Link href={`/planos/novo?client=${client.id}`}>
+              <Plus className="h-3.5 w-3.5" />
+              Vender plano
+            </Link>
+          </Button>
+        </div>
+        {subscriptions.length === 0 ? (
+          <p className="text-sm text-muted-foreground">Este cliente nunca teve um plano.</p>
+        ) : (
+          <div className="space-y-2">
+            {subscriptions.map((sub) => (
+              <Card key={sub.id}>
+                <CardContent className="space-y-3 p-4">
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm text-muted-foreground">
+                      Comprado em {formatDate(sub.purchased_at)} · {formatCurrency(sub.price)}
+                    </p>
+                    <Badge
+                      variant={
+                        sub.status === "active"
+                          ? "gold"
+                          : sub.status === "completed"
+                            ? "success"
+                            : "destructive"
+                      }
+                    >
+                      {SUBSCRIPTION_STATUS_LABEL[sub.status]}
+                    </Badge>
+                  </div>
+                  <WeeksProgress state={sub.state} />
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
+      </div>
 
       <div>
         <h2 className="mb-3 text-sm font-semibold text-muted-foreground">Histórico</h2>

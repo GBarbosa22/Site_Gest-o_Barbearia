@@ -44,7 +44,6 @@ export default async function BarbeirosPage() {
                       </p>
                     ) : null}
                   </div>
-                  <Badge variant="gold">{barber.commission_percent}% comissão</Badge>
                 </CardContent>
               </Card>
             </Link>

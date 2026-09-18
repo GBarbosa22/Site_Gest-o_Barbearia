@@ -2,6 +2,7 @@ import { getCurrentUserProfile } from "@/services/auth.service";
 import { listBarbers, getBarberByUserId } from "@/services/barbers.service";
 import { listClients } from "@/services/clients.service";
 import { listServices } from "@/services/catalog.service";
+import { getUsableSubscriptionsMap } from "@/services/subscriptions.service";
 import { AppointmentForm } from "@/components/appointments/appointment-form";
 import { createAttendanceAction } from "@/app/(dashboard)/atendimentos/actions";
 
@@ -9,11 +10,12 @@ export default async function NovoAtendimentoPage() {
   const user = await getCurrentUserProfile();
   const isAdmin = user?.role === "admin";
 
-  const [clients, services, barbers, lockedBarber] = await Promise.all([
+  const [clients, services, barbers, lockedBarber, usableSubscriptionsByClient] = await Promise.all([
     listClients(),
     listServices({ onlyActive: true }),
     isAdmin ? listBarbers({ onlyActive: true }) : Promise.resolve([]),
     !isAdmin && user ? getBarberByUserId(user.id) : Promise.resolve(null),
+    getUsableSubscriptionsMap(),
   ]);
 
   return (
@@ -28,6 +30,7 @@ export default async function NovoAtendimentoPage() {
         services={services}
         barbers={barbers}
         lockedBarber={lockedBarber}
+        usableSubscriptionsByClient={usableSubscriptionsByClient}
       />
     </div>
   );

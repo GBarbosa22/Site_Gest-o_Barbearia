@@ -28,19 +28,6 @@ export function BarberForm({ action, barber }: BarberFormProps) {
         <Input id="phone" name="phone" defaultValue={barber?.phone ?? ""} placeholder="(11) 90000-0000" />
       </div>
 
-      <div className="space-y-2">
-        <Label htmlFor="commission_percent">Comissão (%)</Label>
-        <Input
-          id="commission_percent"
-          name="commission_percent"
-          type="number"
-          step="0.01"
-          min={0}
-          max={100}
-          defaultValue={barber?.commission_percent ?? 0}
-        />
-      </div>
-
       <div className="flex items-center justify-between rounded-lg border border-border p-4">
         <Label htmlFor="active" className="cursor-pointer">
           Barbeiro ativo

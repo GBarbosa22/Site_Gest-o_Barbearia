@@ -3,6 +3,7 @@ import {
   ClipboardList,
   Users,
   Scissors,
+  Ticket,
   Package,
   Wallet,
   BarChart3,
@@ -24,6 +25,7 @@ export const NAV_ITEMS: NavItem[] = [
   { href: "/dashboard", label: "Início", icon: LayoutDashboard, mobilePrimary: true },
   { href: "/atendimentos", label: "Atendimentos", icon: ClipboardList, mobilePrimary: true },
   { href: "/clientes", label: "Clientes", icon: Users, mobilePrimary: true },
+  { href: "/planos", label: "Planos", icon: Ticket },
   { href: "/barbeiros", label: "Barbeiros", icon: UserCog, adminOnly: true },
   { href: "/servicos", label: "Serviços", icon: Scissors, adminOnly: true },
   {

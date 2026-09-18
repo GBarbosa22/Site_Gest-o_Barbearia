@@ -39,7 +39,6 @@ export async function createBarber(input: BarberInput): Promise<{ error: string 
   const { error } = await supabase.from("barbers").insert({
     full_name: input.full_name,
     phone: input.phone || null,
-    commission_percent: input.commission_percent,
     active: input.active,
   });
   return { error: error?.message ?? null };
@@ -55,7 +54,6 @@ export async function updateBarber(
     .update({
       full_name: input.full_name,
       phone: input.phone || null,
-      commission_percent: input.commission_percent,
       active: input.active,
     })
     .eq("id", id);

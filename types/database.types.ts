@@ -1,4 +1,4 @@
-// Tipos do banco (Fases 1-2). Nas próximas fases, gerar via
+// Tipos do banco (Fases 1-3). Nas próximas fases, gerar via
 // `supabase gen types typescript` e substituir por esse arquivo completo.
 //
 // IMPORTANTE: use sempre `type` (nunca `interface`) para Row/Insert/Update.
@@ -15,6 +15,7 @@ export type AppointmentStatus =
   | "cancelled"
   | "no_show";
 export type PaymentMethod = "pix" | "dinheiro" | "credito" | "debito";
+export type SubscriptionStatus = "active" | "completed" | "expired" | "cancelled";
 
 export type UserRow = {
   id: string;
@@ -32,7 +33,6 @@ export type BarberRow = {
   full_name: string;
   phone: string | null;
   photo_url: string | null;
-  commission_percent: number;
   active: boolean;
   created_at: string;
   updated_at: string;
@@ -81,10 +81,34 @@ export type PaymentRow = {
   discount: number;
   method: PaymentMethod | null;
   paid: boolean;
+  /** Só relevante quando paid=false: data prevista para o dinheiro entrar. */
+  due_date: string | null;
   notes: string | null;
   created_by: string | null;
   created_at: string;
   updated_at: string;
+};
+
+export type SubscriptionRow = {
+  id: string;
+  client_id: string;
+  barber_id: string | null;
+  price: number;
+  total_credits: number;
+  purchased_at: string;
+  status: SubscriptionStatus;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type SubscriptionUseRow = {
+  id: string;
+  subscription_id: string;
+  week_number: number;
+  appointment_id: string | null;
+  used_at: string;
+  created_by: string | null;
 };
 
 type UserInsert = {
@@ -101,7 +125,6 @@ type BarberInsert = {
   full_name: string;
   phone?: string | null;
   photo_url?: string | null;
-  commission_percent?: number;
   active?: boolean;
 };
 
@@ -142,7 +165,28 @@ type PaymentInsert = {
   discount?: number;
   method?: PaymentMethod | null;
   paid?: boolean;
+  due_date?: string | null;
   notes?: string | null;
+  created_by?: string | null;
+};
+
+type SubscriptionInsert = {
+  id?: string;
+  client_id: string;
+  barber_id?: string | null;
+  price: number;
+  total_credits?: number;
+  purchased_at?: string;
+  status?: SubscriptionStatus;
+  created_by?: string | null;
+};
+
+type SubscriptionUseInsert = {
+  id?: string;
+  subscription_id: string;
+  week_number: number;
+  appointment_id?: string | null;
+  used_at?: string;
   created_by?: string | null;
 };
 
@@ -183,6 +227,18 @@ export type Database = {
         Row: PaymentRow;
         Insert: PaymentInsert;
         Update: Partial<PaymentInsert>;
+        Relationships: [];
+      };
+      subscriptions: {
+        Row: SubscriptionRow;
+        Insert: SubscriptionInsert;
+        Update: Partial<SubscriptionInsert>;
+        Relationships: [];
+      };
+      subscription_uses: {
+        Row: SubscriptionUseRow;
+        Insert: SubscriptionUseInsert;
+        Update: Partial<SubscriptionUseInsert>;
         Relationships: [];
       };
     };

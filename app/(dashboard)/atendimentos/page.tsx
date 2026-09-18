@@ -8,7 +8,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Select } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { DateNav } from "@/components/appointments/date-nav";
-import { formatCurrency, formatTime, toISODateString } from "@/lib/utils";
+import { formatCurrency, formatDate, formatTime, toISODateString } from "@/lib/utils";
 
 export default async function AtendimentosPage({
   searchParams,
@@ -85,13 +85,24 @@ export default async function AtendimentosPage({
                   </div>
                   <div className="text-right">
                     <p className="text-sm font-semibold">
-                      {item.payment ? formatCurrency(Number(item.payment.amount) - Number(item.payment.discount)) : "-"}
+                      {item.payment
+                        ? formatCurrency(Number(item.payment.amount) - Number(item.payment.discount))
+                        : "-"}
                     </p>
                     {item.payment && !item.payment.paid ? (
-                      <Badge variant="destructive">Vai pagar</Badge>
+                      <div>
+                        <Badge variant="destructive">Vai pagar</Badge>
+                        {item.payment.due_date ? (
+                          <p className="mt-0.5 text-[10px] text-muted-foreground">
+                            até {formatDate(item.payment.due_date)}
+                          </p>
+                        ) : null}
+                      </div>
                     ) : item.payment ? (
                       <Badge variant="success">Pago</Badge>
-                    ) : null}
+                    ) : (
+                      <Badge variant="gold">Plano</Badge>
+                    )}
                   </div>
                 </CardContent>
               </Card>
