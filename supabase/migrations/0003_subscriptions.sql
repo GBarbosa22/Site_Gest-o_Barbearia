@@ -28,8 +28,9 @@ create table public.subscriptions (
 );
 
 comment on table public.subscriptions is
-  'Plano de N cortes (hoje sempre 4), 1 crédito liberado por semana a partir de '
-  'purchased_at. Crédito não usado na semana é perdido — não acumula.';
+  'Plano de N cortes (hoje sempre 4), 1 crédito liberado a cada semana de '
+  'calendário (segunda a domingo) a partir da semana da compra. Crédito não '
+  'usado até domingo é perdido — não acumula.';
 
 create index subscriptions_client_idx on public.subscriptions (client_id);
 create index subscriptions_status_idx on public.subscriptions (status);
