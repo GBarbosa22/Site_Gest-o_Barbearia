@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { getRevenueBetween } from "@/services/payments.service";
-import { listActiveSubscriptions } from "@/services/subscriptions.service";
+import { listActiveSubscriptions, getSubscriptionRevenueBetween } from "@/services/subscriptions.service";
+import { listLowStockProducts } from "@/services/products.service";
 import type { DashboardSummary, RecentAttendance } from "@/types";
 
 function startOfDayISO(date = new Date()) {
@@ -35,10 +36,14 @@ export async function getDashboardSummary(): Promise<DashboardSummary> {
     { count: cutsToday },
     { count: newClientsToday },
     { data: recent },
-    revenueToday,
-    revenueWeek,
-    revenueMonth,
+    paymentsRevenueToday,
+    paymentsRevenueWeek,
+    paymentsRevenueMonth,
+    subscriptionsRevenueToday,
+    subscriptionsRevenueWeek,
+    subscriptionsRevenueMonth,
     activeSubscriptions,
+    lowStockProducts,
   ] = await Promise.all([
     supabase
       .from("appointments")
@@ -61,8 +66,16 @@ export async function getDashboardSummary(): Promise<DashboardSummary> {
     getRevenueBetween(todayStart, now),
     getRevenueBetween(startOfWeekISO(), now),
     getRevenueBetween(startOfMonthISO(), now),
+    getSubscriptionRevenueBetween(todayStart, now),
+    getSubscriptionRevenueBetween(startOfWeekISO(), now),
+    getSubscriptionRevenueBetween(startOfMonthISO(), now),
     listActiveSubscriptions(),
+    listLowStockProducts(),
   ]);
+
+  const revenueToday = paymentsRevenueToday + subscriptionsRevenueToday;
+  const revenueWeek = paymentsRevenueWeek + subscriptionsRevenueWeek;
+  const revenueMonth = paymentsRevenueMonth + subscriptionsRevenueMonth;
 
   const distinctClientsToday = await supabase
     .from("appointments")
@@ -95,7 +108,7 @@ export async function getDashboardSummary(): Promise<DashboardSummary> {
     clientsAttendedToday,
     newClientsToday: newClientsToday ?? 0,
     activeSubscriptions: activeSubscriptions.length,
-    lowStockCount: 0,
+    lowStockCount: lowStockProducts.length,
     recentAttendances,
   };
 }

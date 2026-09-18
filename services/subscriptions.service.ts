@@ -93,6 +93,27 @@ export async function getUsableSubscriptionsMap(): Promise<Record<string, Usable
   return map;
 }
 
+/**
+ * Receita de venda de planos no período (para entrar no faturamento do
+ * dashboard junto com os pagamentos de atendimento). Planos cancelados não
+ * contam — considera-se que o valor foi estornado/anulado.
+ */
+export async function getSubscriptionRevenueBetween(
+  startISO: string,
+  endISO: string
+): Promise<number> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("subscriptions")
+    .select("price, status")
+    .neq("status", "cancelled")
+    .gte("purchased_at", startISO)
+    .lt("purchased_at", endISO);
+
+  if (error || !data) return 0;
+  return data.reduce((sum, row) => sum + Number(row.price), 0);
+}
+
 export async function createSubscription(input: {
   clientId: string;
   barberId?: string | null;

@@ -7,6 +7,7 @@ import {
   type PaymentInput,
 } from "@/services/payments.service";
 import { getSubscription, useSubscriptionCredit } from "@/services/subscriptions.service";
+import { consumeServiceRecipe } from "@/services/products.service";
 import type { AppointmentRow, AppointmentStatus, PaymentRow } from "@/types/database.types";
 import type { AttendanceInput } from "@/lib/validations/appointment";
 
@@ -140,6 +141,10 @@ export async function createAttendance(input: AttendanceInput): Promise<{ error:
   if (error || !appointment) {
     return { error: error?.message ?? "Não foi possível registrar o atendimento." };
   }
+
+  // Desconta do estoque os produtos da "receita" do serviço (ex.: pigmentação
+  // consome 1 sachê de tinta), independente da forma de pagamento usada.
+  await consumeServiceRecipe(input.service_id, appointment.id);
 
   if (input.subscription_id) {
     const subscription = await getSubscription(input.subscription_id);

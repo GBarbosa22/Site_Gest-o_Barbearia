@@ -26,6 +26,7 @@ export type CashMovementCategory =
   | "sangria"
   | "ajuste"
   | "outro";
+export type StockMovementType = "compra" | "venda" | "consumo" | "ajuste" | "perda";
 
 export type UserRow = {
   id: string;
@@ -151,6 +152,38 @@ export type CashMovementRow = {
   created_at: string;
 };
 
+export type ProductRow = {
+  id: string;
+  name: string;
+  category: string | null;
+  unit: string;
+  cost: number;
+  price: number;
+  quantity_on_hand: number;
+  min_quantity: number;
+  active: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+export type ServiceProductRow = {
+  id: string;
+  service_id: string;
+  product_id: string;
+  quantity: number;
+};
+
+export type StockMovementRow = {
+  id: string;
+  product_id: string;
+  type: StockMovementType;
+  quantity: number;
+  related_appointment_id: string | null;
+  notes: string | null;
+  created_by: string | null;
+  created_at: string;
+};
+
 type UserInsert = {
   id: string;
   full_name: string;
@@ -257,6 +290,35 @@ type CashMovementInsert = {
   created_by?: string | null;
 };
 
+type ProductInsert = {
+  id?: string;
+  name: string;
+  category?: string | null;
+  unit?: string;
+  cost?: number;
+  price?: number;
+  quantity_on_hand?: number;
+  min_quantity?: number;
+  active?: boolean;
+};
+
+type ServiceProductInsert = {
+  id?: string;
+  service_id: string;
+  product_id: string;
+  quantity: number;
+};
+
+type StockMovementInsert = {
+  id?: string;
+  product_id: string;
+  type: StockMovementType;
+  quantity: number;
+  related_appointment_id?: string | null;
+  notes?: string | null;
+  created_by?: string | null;
+};
+
 export type Database = {
   public: {
     Tables: {
@@ -320,12 +382,38 @@ export type Database = {
         Update: Partial<CashMovementInsert>;
         Relationships: [];
       };
+      products: {
+        Row: ProductRow;
+        Insert: ProductInsert;
+        Update: Partial<ProductInsert>;
+        Relationships: [];
+      };
+      service_products: {
+        Row: ServiceProductRow;
+        Insert: ServiceProductInsert;
+        Update: Partial<ServiceProductInsert>;
+        Relationships: [];
+      };
+      stock_movements: {
+        Row: StockMovementRow;
+        Insert: StockMovementInsert;
+        Update: Partial<StockMovementInsert>;
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: {
       get_open_cash_register_id: {
         Args: Record<PropertyKey, never>;
         Returns: string;
+      };
+      consume_product_stock: {
+        Args: {
+          p_product_id: string;
+          p_quantity: number;
+          p_appointment_id: string;
+        };
+        Returns: void;
       };
     };
   };

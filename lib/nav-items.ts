@@ -31,7 +31,7 @@ export const NAV_ITEMS: NavItem[] = [
   { href: "/servicos", label: "Serviços", icon: Scissors, adminOnly: true },
   { href: "/caixa", label: "Caixa", icon: Banknote, adminOnly: true },
   {
-    href: "/estoque",
+    href: "/produtos",
     label: "Estoque",
     icon: Package,
     adminOnly: true,
