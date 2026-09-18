@@ -142,3 +142,21 @@ export async function consumeServiceRecipe(serviceId: string, appointmentId: str
     });
   }
 }
+
+/**
+ * Consumo interno avulso — não vinculado à "receita" de um serviço (ex.: usou
+ * uma lâmina extra, gastou mais álcool que o normal). Qualquer usuário
+ * autenticado pode registrar (a função no banco é security definer).
+ */
+export async function recordAdHocConsumption(
+  productId: string,
+  quantity: number
+): Promise<{ error: string | null }> {
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("consume_product_stock", {
+    p_product_id: productId,
+    p_quantity: quantity,
+    p_appointment_id: null,
+  });
+  return { error: error?.message ?? null };
+}

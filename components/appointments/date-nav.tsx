@@ -8,13 +8,21 @@ function addDays(dateISO: string, days: number) {
   return toISODateString(date);
 }
 
-function buildHref(date: string, barberId?: string) {
+function buildHref(basePath: string, date: string, barberId?: string) {
   const params = new URLSearchParams({ date });
   if (barberId) params.set("barber", barberId);
-  return `/atendimentos?${params.toString()}`;
+  return `${basePath}?${params.toString()}`;
 }
 
-export function DateNav({ date, barberId }: { date: string; barberId?: string }) {
+export function DateNav({
+  date,
+  barberId,
+  basePath = "/atendimentos",
+}: {
+  date: string;
+  barberId?: string;
+  basePath?: string;
+}) {
   const today = toISODateString(new Date());
   const label = new Intl.DateTimeFormat("pt-BR", {
     weekday: "long",
@@ -25,7 +33,7 @@ export function DateNav({ date, barberId }: { date: string; barberId?: string })
   return (
     <div className="flex items-center justify-between rounded-lg border border-border p-2">
       <Link
-        href={buildHref(addDays(date, -1), barberId)}
+        href={buildHref(basePath, addDays(date, -1), barberId)}
         className="flex h-10 w-10 items-center justify-center rounded-md text-muted-foreground active:bg-accent"
         aria-label="Dia anterior"
       >
@@ -34,13 +42,13 @@ export function DateNav({ date, barberId }: { date: string; barberId?: string })
       <div className="text-center">
         <p className="text-sm font-medium capitalize">{label}</p>
         {date !== today ? (
-          <Link href={buildHref(today, barberId)} className="text-xs text-gold">
+          <Link href={buildHref(basePath, today, barberId)} className="text-xs text-gold">
             Voltar para hoje
           </Link>
         ) : null}
       </div>
       <Link
-        href={buildHref(addDays(date, 1), barberId)}
+        href={buildHref(basePath, addDays(date, 1), barberId)}
         className="flex h-10 w-10 items-center justify-center rounded-md text-muted-foreground active:bg-accent"
         aria-label="Próximo dia"
       >

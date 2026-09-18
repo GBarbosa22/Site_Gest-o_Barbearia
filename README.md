@@ -31,6 +31,23 @@ Hospedagem gratuita: Vercel (front-end) + Supabase (backend/banco), sem servidor
   automáticas de pagamentos em dinheiro (corte/plano), saídas manuais (despesa/compra/sangria),
   fechamento com saldo esperado vs. informado. Exclusivo do admin; nunca apaga fechamentos.
 - Dashboard com faturamento real (hoje/semana/mês) a partir dos pagamentos.
+- Impede 2 planos ativos por cliente ao mesmo tempo, e permite cancelar um plano criado errado
+  (`supabase/migrations/0006_one_active_subscription.sql`).
+
+## Fase 4 (entregue)
+
+- **Estoque** (`supabase/migrations/0005_products.sql`): cadastro de produtos com quantidade
+  mínima e alerta de estoque baixo. Cada serviço pode ter uma "receita" de produtos (ex.:
+  Pigmentação = 1 sachê de tinta) que desconta o estoque automaticamente a cada atendimento.
+- **Consumo interno avulso** (`/consumo-interno`): registrar um gasto de produto fora da receita
+  automática (ex.: uma lâmina a mais), sem precisar estar vinculado a um atendimento.
+- **Venda de produtos** (`supabase/migrations/0007_sales.sql`): venda avulsa ou durante um
+  atendimento, com os mesmos métodos de pagamento (ou "vai pagar depois"), desconto automático do
+  estoque e entrada automática no caixa.
+- **Financeiro** (`/financeiro`, admin): filtros por período (hoje/semana/mês/personalizado) e
+  barbeiro; faturamento total e por origem (cortes/planos/produtos), ticket médio, clientes
+  novos/recorrentes, ranking de serviços e produtos mais vendidos, faturamento por barbeiro, e
+  exportação em CSV (abre no Excel).
 
 ## Pré-requisitos
 
@@ -53,7 +70,8 @@ cp .env.local.example .env.local
 
 Rode as migrações no seu projeto Supabase, na ordem, colando cada arquivo no SQL Editor e
 clicando Run: `0001_init.sql`, `0002_payments.sql`, `0003_subscriptions.sql`,
-`0004_cash_register.sql`. Ou via CLI:
+`0004_cash_register.sql`, `0005_products.sql`, `0006_one_active_subscription.sql`,
+`0007_sales.sql`. Ou via CLI:
 
 ```bash
 npx supabase link --project-ref SEU_PROJECT_REF
@@ -92,5 +110,5 @@ as variáveis de ambiente do `.env.local` no painel do projeto na Vercel.
 
 ## Próximas fases
 
-- **Fase 4:** Estoque, consumo interno, vendas de produtos, financeiro completo.
-- **Fase 5:** Auditoria, relatórios, PWA completo (service worker), refinamento visual.
+- **Fase 5:** Auditoria, relatórios avançados (PDF), PWA completo (service worker), refinamento
+  visual.

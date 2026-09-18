@@ -8,6 +8,7 @@ import { formatCurrency, formatDate, formatTime } from "@/lib/utils";
 const CATEGORY_LABEL: Record<string, string> = {
   corte: "Corte",
   plano: "Plano",
+  venda: "Venda de produto",
   despesa: "Despesa",
   compra: "Compra",
   sangria: "Sangria",

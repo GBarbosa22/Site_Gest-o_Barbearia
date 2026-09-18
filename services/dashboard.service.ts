@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getRevenueBetween } from "@/services/payments.service";
 import { listActiveSubscriptions, getSubscriptionRevenueBetween } from "@/services/subscriptions.service";
 import { listLowStockProducts } from "@/services/products.service";
+import { getSalesRevenueBetween } from "@/services/sales.service";
 import type { DashboardSummary, RecentAttendance } from "@/types";
 
 function startOfDayISO(date = new Date()) {
@@ -42,6 +43,9 @@ export async function getDashboardSummary(): Promise<DashboardSummary> {
     subscriptionsRevenueToday,
     subscriptionsRevenueWeek,
     subscriptionsRevenueMonth,
+    salesRevenueToday,
+    salesRevenueWeek,
+    salesRevenueMonth,
     activeSubscriptions,
     lowStockProducts,
   ] = await Promise.all([
@@ -69,13 +73,16 @@ export async function getDashboardSummary(): Promise<DashboardSummary> {
     getSubscriptionRevenueBetween(todayStart, now),
     getSubscriptionRevenueBetween(startOfWeekISO(), now),
     getSubscriptionRevenueBetween(startOfMonthISO(), now),
+    getSalesRevenueBetween(todayStart, now),
+    getSalesRevenueBetween(startOfWeekISO(), now),
+    getSalesRevenueBetween(startOfMonthISO(), now),
     listActiveSubscriptions(),
     listLowStockProducts(),
   ]);
 
-  const revenueToday = paymentsRevenueToday + subscriptionsRevenueToday;
-  const revenueWeek = paymentsRevenueWeek + subscriptionsRevenueWeek;
-  const revenueMonth = paymentsRevenueMonth + subscriptionsRevenueMonth;
+  const revenueToday = paymentsRevenueToday + subscriptionsRevenueToday + salesRevenueToday;
+  const revenueWeek = paymentsRevenueWeek + subscriptionsRevenueWeek + salesRevenueWeek;
+  const revenueMonth = paymentsRevenueMonth + subscriptionsRevenueMonth + salesRevenueMonth;
 
   const distinctClientsToday = await supabase
     .from("appointments")

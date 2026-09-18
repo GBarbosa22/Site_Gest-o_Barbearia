@@ -21,6 +21,7 @@ export type CashMovementType = "entrada" | "saida";
 export type CashMovementCategory =
   | "corte"
   | "plano"
+  | "venda"
   | "despesa"
   | "compra"
   | "sangria"
@@ -148,6 +149,7 @@ export type CashMovementRow = {
   description: string | null;
   payment_id: string | null;
   subscription_id: string | null;
+  sale_id: string | null;
   created_by: string | null;
   created_at: string;
 };
@@ -179,9 +181,35 @@ export type StockMovementRow = {
   type: StockMovementType;
   quantity: number;
   related_appointment_id: string | null;
+  related_sale_id: string | null;
   notes: string | null;
   created_by: string | null;
   created_at: string;
+};
+
+export type SaleRow = {
+  id: string;
+  client_id: string | null;
+  barber_id: string;
+  appointment_id: string | null;
+  amount: number;
+  discount: number;
+  method: PaymentMethod | null;
+  paid: boolean;
+  due_date: string | null;
+  notes: string | null;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type SaleItemRow = {
+  id: string;
+  sale_id: string;
+  product_id: string;
+  quantity: number;
+  unit_price: number;
+  subtotal: number;
 };
 
 type UserInsert = {
@@ -287,6 +315,7 @@ type CashMovementInsert = {
   description?: string | null;
   payment_id?: string | null;
   subscription_id?: string | null;
+  sale_id?: string | null;
   created_by?: string | null;
 };
 
@@ -315,8 +344,32 @@ type StockMovementInsert = {
   type: StockMovementType;
   quantity: number;
   related_appointment_id?: string | null;
+  related_sale_id?: string | null;
   notes?: string | null;
   created_by?: string | null;
+};
+
+type SaleInsert = {
+  id?: string;
+  client_id?: string | null;
+  barber_id: string;
+  appointment_id?: string | null;
+  amount: number;
+  discount?: number;
+  method?: PaymentMethod | null;
+  paid?: boolean;
+  due_date?: string | null;
+  notes?: string | null;
+  created_by?: string | null;
+};
+
+type SaleItemInsert = {
+  id?: string;
+  sale_id: string;
+  product_id: string;
+  quantity: number;
+  unit_price: number;
+  subtotal: number;
 };
 
 export type Database = {
@@ -400,6 +453,18 @@ export type Database = {
         Update: Partial<StockMovementInsert>;
         Relationships: [];
       };
+      sales: {
+        Row: SaleRow;
+        Insert: SaleInsert;
+        Update: Partial<SaleInsert>;
+        Relationships: [];
+      };
+      sale_items: {
+        Row: SaleItemRow;
+        Insert: SaleItemInsert;
+        Update: Partial<SaleItemInsert>;
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: {
@@ -411,7 +476,15 @@ export type Database = {
         Args: {
           p_product_id: string;
           p_quantity: number;
-          p_appointment_id: string;
+          p_appointment_id: string | null;
+        };
+        Returns: void;
+      };
+      sell_product_stock: {
+        Args: {
+          p_product_id: string;
+          p_quantity: number;
+          p_sale_id: string;
         };
         Returns: void;
       };

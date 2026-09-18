@@ -5,11 +5,13 @@ import {
   Scissors,
   Ticket,
   Package,
+  ShoppingBag,
   Wallet,
   Banknote,
   BarChart3,
   ShieldCheck,
   UserCog,
+  PackageMinus,
   type LucideIcon,
 } from "lucide-react";
 
@@ -27,6 +29,8 @@ export const NAV_ITEMS: NavItem[] = [
   { href: "/atendimentos", label: "Atendimentos", icon: ClipboardList, mobilePrimary: true },
   { href: "/clientes", label: "Clientes", icon: Users, mobilePrimary: true },
   { href: "/planos", label: "Planos", icon: Ticket },
+  { href: "/vendas", label: "Vendas", icon: ShoppingBag },
+  { href: "/consumo-interno", label: "Consumo interno", icon: PackageMinus },
   { href: "/barbeiros", label: "Barbeiros", icon: UserCog, adminOnly: true },
   { href: "/servicos", label: "Serviços", icon: Scissors, adminOnly: true },
   { href: "/caixa", label: "Caixa", icon: Banknote, adminOnly: true },

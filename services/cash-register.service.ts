@@ -128,15 +128,16 @@ export async function addManualMovement(input: {
 }
 
 /**
- * Lança a entrada automática de um pagamento em dinheiro (corte ou plano) no
- * caixa aberto. Não faz nada se não houver caixa aberto no momento — o caixa
- * é opcional no dia a dia, não bloqueia o registro do atendimento.
+ * Lança a entrada automática de um pagamento em dinheiro (corte, plano ou
+ * venda de produto) no caixa aberto. Não faz nada se não houver caixa aberto
+ * no momento — o caixa é opcional no dia a dia, não bloqueia o registro.
  */
 export async function recordAutoCashEntry(input: {
-  category: Extract<CashMovementCategory, "corte" | "plano">;
+  category: Extract<CashMovementCategory, "corte" | "plano" | "venda">;
   amount: number;
   paymentId?: string;
   subscriptionId?: string;
+  saleId?: string;
 }): Promise<void> {
   const supabase = await createClient();
   const user = await getCurrentUserProfile();
@@ -154,6 +155,7 @@ export async function recordAutoCashEntry(input: {
     amount: input.amount,
     payment_id: input.paymentId ?? null,
     subscription_id: input.subscriptionId ?? null,
+    sale_id: input.saleId ?? null,
     created_by: user?.id ?? null,
   });
 }
