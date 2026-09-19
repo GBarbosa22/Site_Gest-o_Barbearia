@@ -25,14 +25,18 @@ export type AuditAction =
   | "atendimento_editado"
   | "atendimento_cancelado"
   | "pagamento_recebido"
+  | "pagamento_editado"
   | "plano_vendido"
   | "plano_usado"
   | "plano_cancelado"
+  | "plano_status_sincronizado"
   | "venda_registrada"
   | "venda_paga"
   | "caixa_aberto"
   | "caixa_fechado"
-  | "caixa_saida_registrada";
+  | "caixa_entrada_registrada"
+  | "caixa_saida_registrada"
+  | "caixa_entrada_automatica";
 
 export type AuditEntity =
   | "user"
@@ -89,20 +93,30 @@ export interface AuditLogFilters {
   entity?: AuditEntity;
   actorId?: string;
   limit?: number;
+  offset?: number;
 }
 
-export async function listAuditLogs(filters: AuditLogFilters = {}): Promise<AuditLogRow[]> {
+/** Página de registros de auditoria + se há uma próxima página. */
+export async function listAuditLogs(
+  filters: AuditLogFilters = {}
+): Promise<{ logs: AuditLogRow[]; hasMore: boolean }> {
   const supabase = await createClient();
+  const limit = filters.limit ?? 50;
+  const offset = filters.offset ?? 0;
+
   let query = supabase
     .from("audit_logs")
     .select("*")
     .order("created_at", { ascending: false })
-    .limit(filters.limit ?? 100);
+    // pede 1 a mais só para saber se existe próxima página
+    .range(offset, offset + limit);
 
   if (filters.entity) query = query.eq("entity", filters.entity);
   if (filters.actorId) query = query.eq("actor_id", filters.actorId);
 
   const { data, error } = await query;
   if (error) throw new Error(error.message);
-  return data ?? [];
+
+  const rows = data ?? [];
+  return { logs: rows.slice(0, limit), hasMore: rows.length > limit };
 }

@@ -17,6 +17,10 @@ async function attachStateAndSync(row: any, supabase: Awaited<ReturnType<typeof 
   // Mantém o status salvo em sincronia com a regra derivada (sem depender de cron).
   if (row.status === "active" && state.derivedStatus !== "active") {
     await supabase.from("subscriptions").update({ status: state.derivedStatus }).eq("id", row.id);
+    await logAudit("plano_status_sincronizado", "subscription", row.id, {
+      de: "active",
+      para: state.derivedStatus,
+    });
     row.status = state.derivedStatus;
   }
 
@@ -200,8 +204,12 @@ export async function useSubscriptionCredit(
   });
 
   const subscription = await getSubscription(subscriptionId);
-  if (subscription && subscription.state.derivedStatus === "completed") {
+  if (subscription && subscription.state.derivedStatus === "completed" && subscription.status !== "completed") {
     await supabase.from("subscriptions").update({ status: "completed" }).eq("id", subscriptionId);
+    await logAudit("plano_status_sincronizado", "subscription", subscriptionId, {
+      de: "active",
+      para: "completed",
+    });
   }
 
   return { error: null };

@@ -101,4 +101,10 @@
   body {
     background: white !important;
   }
+
+  /* Evita cortar um card de movimentação/linha de relatório ao meio entre
+     duas páginas impressas. */
+  [data-print-item] {
+    break-inside: avoid;
+  }
 }

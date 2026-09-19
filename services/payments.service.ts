@@ -72,7 +72,7 @@ export async function updatePayment(
   input: PaymentInput
 ): Promise<{ error: string | null }> {
   const supabase = await createClient();
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from("payments")
     .update({
       amount: input.amount,
@@ -82,7 +82,17 @@ export async function updatePayment(
       due_date: input.method === null ? input.dueDate || null : null,
       notes: input.notes || null,
     })
-    .eq("appointment_id", appointmentId);
+    .eq("appointment_id", appointmentId)
+    .select("id")
+    .single();
+
+  if (!error && data?.id) {
+    await logAudit("pagamento_editado", "payment", data.id, {
+      metodo: input.method,
+      valor: input.amount - input.discount,
+    });
+  }
+
   return { error: error?.message ?? null };
 }
 

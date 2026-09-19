@@ -33,6 +33,7 @@ export function ServiceForm({ action, service }: ServiceFormProps) {
             min={5}
             step={5}
             defaultValue={service?.duration_minutes ?? 30}
+            onFocus={(e) => e.target.select()}
             required
           />
         </div>

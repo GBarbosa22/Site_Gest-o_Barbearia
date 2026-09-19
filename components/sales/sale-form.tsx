@@ -61,7 +61,8 @@ export function SaleForm({ action, clients, products, barbers, lockedBarber }: S
   }
 
   const total = items.reduce((sum, i) => sum + Number(i.quantity || 0) * Number(i.unit_price || 0), 0);
-  const totalWithDiscount = Math.max(0, total - Number(discount || 0));
+  const clampedDiscount = Math.min(Math.max(0, Number(discount || 0)), total);
+  const totalWithDiscount = Math.max(0, total - clampedDiscount);
 
   function handleSubmit(formData: FormData) {
     const payload = items
@@ -72,6 +73,9 @@ export function SaleForm({ action, clients, products, barbers, lockedBarber }: S
         unit_price: Number(i.unit_price),
       }));
     formData.set("items", JSON.stringify(payload));
+    // O desconto nunca é enviado maior que o total — a exibição já avisa o
+    // usuário, mas é este valor (não o digitado cru) que vai pro servidor.
+    formData.set("discount", String(clampedDiscount));
     return formAction(formData);
   }
 
@@ -173,6 +177,11 @@ export function SaleForm({ action, clients, products, barbers, lockedBarber }: S
           value={discount}
           onChange={(e) => setDiscount(e.target.value)}
         />
+        {Number(discount || 0) > total ? (
+          <p className="text-xs text-muted-foreground">
+            Desconto não pode passar do total ({formatCurrency(total)}) — será ajustado ao enviar.
+          </p>
+        ) : null}
       </div>
 
       <div className="rounded-lg border border-border p-3 text-right text-sm">

@@ -3,29 +3,12 @@ import { getRevenueBetween } from "@/services/payments.service";
 import { listActiveSubscriptions, getSubscriptionRevenueBetween } from "@/services/subscriptions.service";
 import { listLowStockProducts } from "@/services/products.service";
 import { getSalesRevenueBetween } from "@/services/sales.service";
+import {
+  startOfDayISOSaoPaulo as startOfDayISO,
+  startOfWeekISOSaoPaulo as startOfWeekISO,
+  startOfMonthISOSaoPaulo as startOfMonthISO,
+} from "@/lib/timezone";
 import type { DashboardSummary, RecentAttendance } from "@/types";
-
-function startOfDayISO(date = new Date()) {
-  const d = new Date(date);
-  d.setHours(0, 0, 0, 0);
-  return d.toISOString();
-}
-
-function startOfWeekISO(date = new Date()) {
-  const d = new Date(date);
-  const day = d.getDay();
-  const diff = (day === 0 ? -6 : 1) - day; // segunda-feira como início da semana
-  d.setDate(d.getDate() + diff);
-  d.setHours(0, 0, 0, 0);
-  return d.toISOString();
-}
-
-function startOfMonthISO(date = new Date()) {
-  const d = new Date(date);
-  d.setDate(1);
-  d.setHours(0, 0, 0, 0);
-  return d.toISOString();
-}
 
 /** Agrega os indicadores do dashboard principal. */
 export async function getDashboardSummary(): Promise<DashboardSummary> {

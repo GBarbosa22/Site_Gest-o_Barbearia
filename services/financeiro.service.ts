@@ -39,7 +39,7 @@ export async function getFinancialReport({ startISO, endISO, barberId }: Filters
   let appointmentsQuery = supabase
     .from("appointments")
     .select(
-      "id, client_id, barber_id, starts_at, barbers(full_name), services(name), payments(amount, discount, paid)"
+      "id, client_id, barber_id, service_id, starts_at, barbers(full_name), services(name), payments(amount, discount, paid)"
     )
     .eq("status", "completed")
     .gte("starts_at", startISO)
@@ -56,7 +56,9 @@ export async function getFinancialReport({ startISO, endISO, barberId }: Filters
 
   let salesQuery = supabase
     .from("sales")
-    .select("amount, discount, barber_id, barbers(full_name), sale_items(quantity, subtotal, products(name))")
+    .select(
+      "amount, discount, barber_id, barbers(full_name), sale_items(product_id, quantity, subtotal, products(name))"
+    )
     .eq("paid", true)
     .gte("created_at", startISO)
     .lt("created_at", endISO);
@@ -75,7 +77,9 @@ export async function getFinancialReport({ startISO, endISO, barberId }: Filters
     ]);
 
   const revenueByBarber = new Map<string, number>();
-  const serviceStats = new Map<string, { count: number; revenue: number }>();
+  // Agrega por ID, não por nome — dois produtos/serviços com o mesmo nome não
+  // podem cair na mesma linha do ranking.
+  const serviceStats = new Map<string, { name: string; count: number; revenue: number }>();
   let revenueCortes = 0;
   const clientIds = new Set<string>();
 
@@ -89,9 +93,10 @@ export async function getFinancialReport({ startISO, endISO, barberId }: Filters
     const barberName = row.barbers?.full_name ?? "Barbeiro";
     revenueByBarber.set(barberName, (revenueByBarber.get(barberName) ?? 0) + value);
 
+    const serviceId = row.service_id ?? row.services?.name ?? "servico-desconhecido";
     const serviceName = row.services?.name ?? "Serviço";
-    const current = serviceStats.get(serviceName) ?? { count: 0, revenue: 0 };
-    serviceStats.set(serviceName, { count: current.count + 1, revenue: current.revenue + value });
+    const current = serviceStats.get(serviceId) ?? { name: serviceName, count: 0, revenue: 0 };
+    serviceStats.set(serviceId, { name: serviceName, count: current.count + 1, revenue: current.revenue + value });
   }
 
   let revenuePlanos = 0;
@@ -102,7 +107,7 @@ export async function getFinancialReport({ startISO, endISO, barberId }: Filters
   }
 
   let revenueProdutos = 0;
-  const productStats = new Map<string, { count: number; revenue: number }>();
+  const productStats = new Map<string, { name: string; count: number; revenue: number }>();
   for (const row of (sales ?? []) as any[]) {
     const value = Number(row.amount) - Number(row.discount);
     revenueProdutos += value;
@@ -110,9 +115,11 @@ export async function getFinancialReport({ startISO, endISO, barberId }: Filters
     revenueByBarber.set(barberName, (revenueByBarber.get(barberName) ?? 0) + value);
 
     for (const item of row.sale_items ?? []) {
+      const productId = item.product_id ?? item.products?.name ?? "produto-desconhecido";
       const productName = item.products?.name ?? "Produto";
-      const current = productStats.get(productName) ?? { count: 0, revenue: 0 };
-      productStats.set(productName, {
+      const current = productStats.get(productId) ?? { name: productName, count: 0, revenue: 0 };
+      productStats.set(productId, {
+        name: productName,
         count: current.count + Number(item.quantity),
         revenue: current.revenue + Number(item.subtotal),
       });
@@ -125,13 +132,11 @@ export async function getFinancialReport({ startISO, endISO, barberId }: Filters
   const ticketMedio = atendimentosCount > 0 ? revenueCortes / atendimentosCount : 0;
   const clientesRecorrentes = Math.max(0, clientesAtendidos - (clientesNovos ?? 0));
 
-  const topServicos: RankingItem[] = Array.from(serviceStats.entries())
-    .map(([name, stats]) => ({ name, ...stats }))
+  const topServicos: RankingItem[] = Array.from(serviceStats.values())
     .sort((a, b) => b.revenue - a.revenue)
     .slice(0, 5);
 
-  const topProdutos: RankingItem[] = Array.from(productStats.entries())
-    .map(([name, stats]) => ({ name, ...stats }))
+  const topProdutos: RankingItem[] = Array.from(productStats.values())
     .sort((a, b) => b.revenue - a.revenue)
     .slice(0, 5);
 

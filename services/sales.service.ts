@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getCurrentUserProfile } from "@/services/auth.service";
 import { recordAutoCashEntry } from "@/services/cash-register.service";
 import { logAudit } from "@/services/audit.service";
+import { dateStringToSaoPauloMidnightISO } from "@/lib/timezone";
 import type { PaymentMethod, SaleRow } from "@/types/database.types";
 
 export interface SaleItemInput {
@@ -17,10 +18,10 @@ export interface SaleListItem extends SaleRow {
 }
 
 function dayRange(dateISO: string) {
-  const start = new Date(`${dateISO}T00:00:00`);
-  const end = new Date(`${dateISO}T00:00:00`);
-  end.setDate(end.getDate() + 1);
-  return { start: start.toISOString(), end: end.toISOString() };
+  const start = dateStringToSaoPauloMidnightISO(dateISO);
+  const end = new Date(start);
+  end.setUTCDate(end.getUTCDate() + 1);
+  return { start, end: end.toISOString() };
 }
 
 const SELECT_WITH_JOINS =
@@ -84,7 +85,22 @@ export async function createSale(input: CreateSaleInput): Promise<{ error: strin
   const supabase = await createClient();
   const user = await getCurrentUserProfile();
 
+  const productIds = [...new Set(input.items.map((item) => item.product_id))];
+  const { data: activeProducts } = await supabase
+    .from("products")
+    .select("id")
+    .eq("active", true)
+    .in("id", productIds);
+  const activeIds = new Set((activeProducts ?? []).map((p) => p.id));
+  if (productIds.some((id) => !activeIds.has(id))) {
+    return { error: "Um ou mais produtos selecionados estão desativados." };
+  }
+
   const total = input.items.reduce((sum, item) => sum + item.quantity * item.unit_price, 0);
+
+  if (input.discount > total) {
+    return { error: "O desconto não pode ser maior que o total da venda." };
+  }
 
   const { data: sale, error } = await supabase
     .from("sales")
@@ -125,11 +141,16 @@ export async function createSale(input: CreateSaleInput): Promise<{ error: strin
   });
 
   for (const item of input.items) {
-    await supabase.rpc("sell_product_stock", {
+    const { error: stockError } = await supabase.rpc("sell_product_stock", {
       p_product_id: item.product_id,
       p_quantity: item.quantity,
       p_sale_id: sale.id,
     });
+    if (stockError) {
+      return {
+        error: `Venda registrada, mas houve um problema no estoque: ${stockError.message}`,
+      };
+    }
   }
 
   if (input.method === "dinheiro") {

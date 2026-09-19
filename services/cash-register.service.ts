@@ -146,10 +146,12 @@ export async function addManualMovement(input: {
     .single();
 
   if (data?.id) {
-    await logAudit("caixa_saida_registrada", "cash_register", register.id, {
-      categoria: input.category,
-      valor: input.amount,
-    });
+    await logAudit(
+      input.type === "entrada" ? "caixa_entrada_registrada" : "caixa_saida_registrada",
+      "cash_register",
+      register.id,
+      { categoria: input.category, valor: input.amount }
+    );
   }
 
   return { error: error?.message ?? null };
@@ -176,14 +178,25 @@ export async function recordAutoCashEntry(input: {
   const { data: openRegisterId } = await supabase.rpc("get_open_cash_register_id");
   if (!openRegisterId) return;
 
-  await supabase.from("cash_movements").insert({
-    cash_register_id: openRegisterId,
-    type: "entrada",
-    category: input.category,
-    amount: input.amount,
-    payment_id: input.paymentId ?? null,
-    subscription_id: input.subscriptionId ?? null,
-    sale_id: input.saleId ?? null,
-    created_by: user?.id ?? null,
-  });
+  const { data, error } = await supabase
+    .from("cash_movements")
+    .insert({
+      cash_register_id: openRegisterId,
+      type: "entrada",
+      category: input.category,
+      amount: input.amount,
+      payment_id: input.paymentId ?? null,
+      subscription_id: input.subscriptionId ?? null,
+      sale_id: input.saleId ?? null,
+      created_by: user?.id ?? null,
+    })
+    .select("id")
+    .single();
+
+  if (!error && data?.id) {
+    await logAudit("caixa_entrada_automatica", "cash_register", openRegisterId, {
+      categoria: input.category,
+      valor: input.amount,
+    });
+  }
 }

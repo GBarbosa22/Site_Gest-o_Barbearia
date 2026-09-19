@@ -60,7 +60,16 @@ export function SubscriptionForm({ action, clients, barbers, defaultClientId }: 
 
       <div className="space-y-2">
         <Label htmlFor="price">Valor do plano (R$)</Label>
-        <Input id="price" name="price" type="number" min={0} step="0.01" defaultValue={100} required />
+        <Input
+          id="price"
+          name="price"
+          type="number"
+          min={0}
+          step="0.01"
+          defaultValue={100}
+          onFocus={(e) => e.target.select()}
+          required
+        />
         <p className="text-xs text-muted-foreground">
           4 cortes, 1 por semana. Sempre editável na venda.
         </p>

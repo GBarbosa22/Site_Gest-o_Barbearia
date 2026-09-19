@@ -8,43 +8,33 @@ import { Button } from "@/components/ui/button";
 import { ExportCsvButton } from "@/components/financeiro/export-csv-button";
 import { PrintButton } from "@/components/financeiro/print-button";
 import { formatCurrency, toISODateString } from "@/lib/utils";
+import {
+  startOfDayISOSaoPaulo,
+  startOfWeekISOSaoPaulo,
+  startOfMonthISOSaoPaulo,
+  dateStringToSaoPauloMidnightISO,
+} from "@/lib/timezone";
 
 type Period = "hoje" | "semana" | "mes" | "personalizado";
 
-function startOfWeek(date: Date) {
-  const d = new Date(date);
-  const day = d.getDay();
-  const diff = (day === 0 ? -6 : 1) - day;
-  d.setDate(d.getDate() + diff);
-  d.setHours(0, 0, 0, 0);
-  return d;
-}
-
 function resolveRange(period: Period, start?: string, end?: string) {
-  const now = new Date();
-
-  if (period === "personalizado" && start && end) {
-    const startDate = new Date(`${start}T00:00:00`);
-    const endDate = new Date(`${end}T00:00:00`);
-    endDate.setDate(endDate.getDate() + 1);
-    return { startISO: startDate.toISOString(), endISO: endDate.toISOString() };
-  }
-
   const endISO = new Date().toISOString();
 
-  if (period === "semana") {
-    return { startISO: startOfWeek(now).toISOString(), endISO };
-  }
-  if (period === "mes") {
-    const d = new Date(now);
-    d.setDate(1);
-    d.setHours(0, 0, 0, 0);
-    return { startISO: d.toISOString(), endISO };
+  if (period === "personalizado" && start && end) {
+    const startISO = dateStringToSaoPauloMidnightISO(start);
+    const endExclusive = new Date(dateStringToSaoPauloMidnightISO(end));
+    endExclusive.setUTCDate(endExclusive.getUTCDate() + 1);
+    return { startISO, endISO: endExclusive.toISOString() };
   }
 
-  const d = new Date(now);
-  d.setHours(0, 0, 0, 0);
-  return { startISO: d.toISOString(), endISO };
+  if (period === "semana") {
+    return { startISO: startOfWeekISOSaoPaulo(), endISO };
+  }
+  if (period === "mes") {
+    return { startISO: startOfMonthISOSaoPaulo(), endISO };
+  }
+
+  return { startISO: startOfDayISOSaoPaulo(), endISO };
 }
 
 export default async function FinanceiroPage({

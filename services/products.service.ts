@@ -152,17 +152,24 @@ export async function setServiceProducts(
   return { error: insertError?.message ?? null };
 }
 
-/** Desconta do estoque os produtos da receita do serviço usado num atendimento. */
+/**
+ * Desconta do estoque os produtos da receita do serviço usado num atendimento.
+ * Lança erro (com a mensagem vinda do banco, ex.: estoque insuficiente) se
+ * qualquer item da receita falhar — quem chama decide o que fazer (hoje:
+ * reportar ao usuário em vez de deixar o atendimento "concluído" com um
+ * desconto de estoque que na verdade não aconteceu).
+ */
 export async function consumeServiceRecipe(serviceId: string, appointmentId: string): Promise<void> {
   const supabase = await createClient();
   const recipe = await getServiceProducts(serviceId);
 
   for (const item of recipe) {
-    await supabase.rpc("consume_product_stock", {
+    const { error } = await supabase.rpc("consume_product_stock", {
       p_product_id: item.product_id,
       p_quantity: item.quantity,
       p_appointment_id: appointmentId,
     });
+    if (error) throw new Error(error.message);
   }
 }
 
@@ -176,6 +183,16 @@ export async function recordAdHocConsumption(
   quantity: number
 ): Promise<{ error: string | null }> {
   const supabase = await createClient();
+
+  const { data: product } = await supabase
+    .from("products")
+    .select("active")
+    .eq("id", productId)
+    .single();
+  if (!product?.active) {
+    return { error: "Esse produto está desativado." };
+  }
+
   const { error } = await supabase.rpc("consume_product_stock", {
     p_product_id: productId,
     p_quantity: quantity,

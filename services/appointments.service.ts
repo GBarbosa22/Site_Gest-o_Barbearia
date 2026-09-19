@@ -149,8 +149,18 @@ export async function createAttendance(input: AttendanceInput): Promise<{ error:
   });
 
   // Desconta do estoque os produtos da "receita" do serviço (ex.: pigmentação
-  // consome 1 sachê de tinta), independente da forma de pagamento usada.
-  await consumeServiceRecipe(input.service_id, appointment.id);
+  // consome 1 sachê de tinta), independente da forma de pagamento usada. O
+  // atendimento em si já foi criado acima; se a baixa de estoque falhar (ex.:
+  // saldo insuficiente), avisamos em vez de deixar isso passar em silêncio.
+  try {
+    await consumeServiceRecipe(input.service_id, appointment.id);
+  } catch (stockError) {
+    return {
+      error: `Atendimento registrado, mas houve um problema no estoque: ${
+        stockError instanceof Error ? stockError.message : "erro desconhecido"
+      }`,
+    };
+  }
 
   if (input.subscription_id) {
     const subscription = await getSubscription(input.subscription_id);
